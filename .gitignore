@@ -1,0 +1,16 @@
+*.zip
+
+node_modules*/
+CDK-dotnet/
+
+# TypeScript output
+dist/
+distb/
+*.tsbuildinfo
+
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+coverage/
