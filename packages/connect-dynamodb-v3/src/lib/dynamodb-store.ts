@@ -4,10 +4,13 @@ import {
   CreateTableCommandInput,
   CreateTableCommand,
   DescribeTableCommand,
+  UpdateTimeToLiveCommand,
 } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocument, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import Debug from 'debug';
+import { promisify } from 'util';
 
+const sleep = promisify(setTimeout);
 const debug = Debug('connect-mongo');
 
 export interface DynamoDBStoreOptions {
@@ -160,14 +163,18 @@ export class DynamoDBStore extends session.Store {
    * @returns
    */
   private async createTableIfNotExists() {
-    const describeTable = await this._dynamoDBClient.send(
-      new DescribeTableCommand({
-        TableName: this._tableName,
-      }),
-    );
-    if (describeTable.Table) {
-      debug('table %s already exists', this._tableName);
-      return;
+    try {
+      const describeTable = await this._dynamoDBClient.send(
+        new DescribeTableCommand({
+          TableName: this._tableName,
+        }),
+      );
+      if (describeTable.Table) {
+        debug('table %s already exists', this._tableName);
+        return;
+      }
+    } catch (error) {
+      debug('table %s does not exist: %s', this._tableName, error.message);
     }
 
     const params: CreateTableCommandInput = {
@@ -192,18 +199,56 @@ export class DynamoDBStore extends session.Store {
     try {
       await this._dynamoDBClient.send(new CreateTableCommand(params));
 
+      // Wait until the table is active
+      let tableReady = false;
+      for (let i = 0; i < 10; i++) {
+        try {
+          const describeTable = await this._dynamoDBClient.send(
+            new DescribeTableCommand({
+              TableName: this._tableName,
+            }),
+          );
+          if (describeTable.Table && describeTable.Table.TableStatus === 'ACTIVE') {
+            debug('table %s created', this._tableName);
+            tableReady = true;
+            break;
+          }
+        } catch (error) {
+          debug('table %s not active yet: %s', this._tableName, error.message);
+        }
+
+        await sleep(3000);
+      }
+
+      if (!tableReady) {
+        debug('table not ready, returning %s', this._tableName, params);
+        return;
+      }
+
+      // Create the TTL Config
+      // This is probably really something that should be done in IaaC instead
+      await this._dynamoDBClient.send(
+        new UpdateTimeToLiveCommand({
+          TableName: this._tableName,
+          TimeToLiveSpecification: {
+            AttributeName: 'expires',
+            Enabled: true,
+          },
+        }),
+      );
+
       debug('created table %s', this._tableName, params);
     } catch (err) {
       debug('error creating table %s: %s', this._tableName, err);
+      throw err;
     }
-
-    // TODO: Create the TTL Config if it does not exist
-    // This may require waiting in a loop until the table exists
-    // This is probably really something that should be done in IaaC instead
   }
 
   /**
    * Create a DynamoDB Table-based express-session store.
+   *
+   * Note: This does not await creation of a table (which should only
+   * be used in quick and dirty tests).
    *
    * @param options
    */
@@ -241,6 +286,27 @@ export class DynamoDBStore extends session.Store {
     if (this._createTableOptions !== undefined) {
       void this.createTableIfNotExists();
     }
+  }
+
+  /**
+   * Create the store and optionally await creation of the table.
+   *
+   * Note: Store-created tables is not advised for production use.
+   *
+   * @param options
+   */
+  public static async create(options: DynamoDBStoreOptions): Promise<DynamoDBStore> {
+    const optionsMinusTableOptions = {
+      ...options,
+    };
+    delete optionsMinusTableOptions.createTableOptions;
+    const store = new DynamoDBStore(optionsMinusTableOptions);
+
+    if (options.createTableOptions !== undefined) {
+      await store.createTableIfNotExists();
+    }
+
+    return store;
   }
 
   public get(sid: string, callback: (err: any, session?: session.SessionData) => void): void {
