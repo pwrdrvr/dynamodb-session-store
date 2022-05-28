@@ -8,6 +8,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { mockClient, AwsClientStub } from 'aws-sdk-client-mock';
 import { DynamoDBStore } from './dynamodb-store';
+import { DescribeTableCommand } from '@aws-sdk/client-dynamodb';
 
 describe('dynamodb-store - mock AWS API', () => {
   let dynamoClient: AwsClientStub<dynamodb.DynamoDBClient>;
@@ -22,14 +23,25 @@ describe('dynamodb-store - mock AWS API', () => {
 
   describe('initialization', () => {
     it('skips CreateTable if table exists', async () => {
-      dynamoClient.onAnyCommand().callsFake((input) => {
-        console.log(inspect(input, true, 10, true));
-      });
+      dynamoClient
+        .onAnyCommand()
+        .callsFake((input) => {
+          console.log('dynamoClient.onAnyCommand', input);
+        })
+        .on(DescribeTableCommand, {
+          TableName: tableName,
+        })
+        .resolves({
+          Table: {
+            TableName: tableName,
+          },
+        });
       ddbMock
         .onAnyCommand()
         .callsFake((input) => {
           console.log(inspect(input, true, 10, true));
         })
+
         .on(
           GetCommand,
           {
@@ -57,13 +69,12 @@ describe('dynamodb-store - mock AWS API', () => {
         });
 
       const store = new DynamoDBStore({
-        dynamoDBClient: dynamoClient,
         tableName,
       });
 
       await store.createTableIfNotExists();
 
-      expect(store.tableName).toBe(TEST_TABLE_NAME);
+      expect(store.tableName).toBe(tableName);
     });
   });
 });

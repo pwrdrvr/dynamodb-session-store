@@ -120,13 +120,40 @@ export interface DynamoDBStoreOptions {
 export class DynamoDBStore extends session.Store {
   private _dynamoDBClient: DynamoDBClient;
   private _ddbDocClient: DynamoDBDocument;
-  private _tableName: string;
-  private _ttl: number;
-  private _touchAfter: number;
-  private _hashKey: string;
-  private _prefix: string;
   private _createTableOptions: Partial<CreateTableCommandInput>;
+
+  private _tableName: string;
+  public get tableName(): string {
+    return this._tableName;
+  }
+
+  private _touchAfter: number;
+  public get touchAfter(): number {
+    return this._touchAfter;
+  }
+
   private _useStronglyConsistentReads: boolean;
+  public get useStronglyConsistentReads(): boolean {
+    return this._useStronglyConsistentReads;
+  }
+  public set useStronglyConsistentReads(value: boolean) {
+    this._useStronglyConsistentReads = value;
+  }
+
+  private _ttl: number;
+  public get ttl(): number {
+    return this._ttl;
+  }
+
+  private _hashKey: string;
+  public get hashKey(): string {
+    return this._hashKey;
+  }
+
+  private _prefix: string;
+  public get prefix(): string {
+    return this._prefix;
+  }
 
   /**
    * Create the table if it does not exist
@@ -265,10 +292,6 @@ export class DynamoDBStore extends session.Store {
   }
 
   public destroy(sid: string, callback?: (err?: any) => void): void {
-    throw new Error('Method not implemented.');
-  }
-
-  public touch(sid: string, session: session.SessionData, callback?: () => void): void {
     throw new Error('Method not implemented.');
   }
 }
