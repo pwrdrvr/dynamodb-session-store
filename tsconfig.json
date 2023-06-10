@@ -2,7 +2,7 @@
   "files": [],
   "references": [
     {
-      "path": "packages/dynamodb-connect-v3/"
+      "path": "packages/connect-dynamodb-v3/"
     },
   ]
 }

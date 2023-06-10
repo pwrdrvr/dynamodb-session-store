@@ -1,0 +1,51 @@
+name: Package and Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 16
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Use the Release Tag Version
+        run: |
+          npm version from-git --allow-same-version --no-git-tag-version
+
+          - name: Cache Node Modules
+          id: cache-node-modules
+          uses: actions/cache@v3
+          with:
+            path: |
+              node_modules
+              packages/**/node_modules
+              !node_modules/.cache
+            key: node-modules-${{ hashFiles('package.json', 'yarn.lock', 'patches/*') }}
+
+      - name: Install Modules
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: NPM registry authentication
+        run: npm set //registry.npmjs.org/:_authToken ${{ secrets.NPMJSORG_PUBLISH_TOKEN }}
+
+      - name: Publish with CLI to Code Artifact
+        run: |
+          npm publish --access public --ignore-scripts --dry-run

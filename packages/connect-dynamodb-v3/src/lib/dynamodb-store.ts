@@ -6,7 +6,7 @@ import {
   DescribeTableCommand,
   UpdateTimeToLiveCommand,
 } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocument, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb';
 import Debug from 'debug';
 import { promisify } from 'util';
 
@@ -309,7 +309,7 @@ export class DynamoDBStore extends session.Store {
     return store;
   }
 
-  public get(sid: string, callback: (err: any, session?: session.SessionData) => void): void {
+  public get(sid: string, callback: (err: unknown, session?: session.SessionData) => void): void {
     void (async () => {
       try {
         const { Item } = await this._ddbDocClient.get({
@@ -335,7 +335,7 @@ export class DynamoDBStore extends session.Store {
     })();
   }
 
-  public set(sid: string, session: session.SessionData, callback?: (err?: any) => void): void {
+  public set(sid: string, session: session.SessionData, callback?: (err?: unknown) => void): void {
     void (async () => {
       try {
         await this._ddbDocClient.put({
@@ -353,11 +353,19 @@ export class DynamoDBStore extends session.Store {
     })();
   }
 
-  public touch(sid: string, session: session.SessionData, callback?: (err?: any) => void): void {
+  public touch(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    sid: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    session: session.SessionData,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    callback?: (err?: unknown) => void,
+  ): void {
     throw new Error('Method not implemented.');
   }
 
-  public destroy(sid: string, callback?: (err?: any) => void): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public destroy(sid: string, callback?: (err?: unknown) => void): void {
     throw new Error('Method not implemented.');
   }
 }

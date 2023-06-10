@@ -1,10 +1,6 @@
+/* eslint-disable no-console */
 import * as dynamodb from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  GetCommand,
-  PutCommand,
-  UpdateCommand,
-} from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient, AwsClientStub } from 'aws-sdk-client-mock';
 import { DynamoDBStore } from './dynamodb-store';
 
