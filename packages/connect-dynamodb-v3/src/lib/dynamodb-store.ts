@@ -11,7 +11,7 @@ import Debug from 'debug';
 import { promisify } from 'util';
 
 const sleep = promisify(setTimeout);
-const debug = Debug('connect-mongo');
+const debug = Debug('connect-dynamodb-v3');
 
 export interface DynamoDBStoreOptions {
   /**
