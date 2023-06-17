@@ -1,3 +1,3 @@
-import { DynamoDBStore } from './dynamodb-store';
+import { DynamoDBStore, DynamoDBStoreOptions } from './dynamodb-store';
 
-export { DynamoDBStore };
+export { DynamoDBStore, DynamoDBStoreOptions };

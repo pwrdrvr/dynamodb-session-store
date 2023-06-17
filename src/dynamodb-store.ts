@@ -17,14 +17,14 @@ export interface DynamoDBStoreOptions {
   /**
    * AWS v3 SDK DynamoDB client, optionally wrapped with XRay, etc.
    *
-   * @default - new DynamoDBClient({})
+   * @default new DynamoDBClient({})
    */
   readonly dynamoDBClient?: DynamoDBClient;
 
   /**
    * Name of the DynamoDB table to use (and optionally create)
    *
-   * @default sessions
+   * @defaultValue 'sessions'
    */
   readonly tableName?: string;
 
@@ -39,7 +39,7 @@ export interface DynamoDBStoreOptions {
    * will ever be automatically aged out.  Scanning and deleting is
    * incredibly expensive and inefficient and is not provided as an option.
    *
-   * @default 1209600 (2 weeks)
+   * @defaultValue 1209600 (2 weeks)
    */
   readonly ttl?: number;
 
@@ -49,37 +49,43 @@ export interface DynamoDBStoreOptions {
    *
    * Set to `0` to always update the session TTL. - This is not suggested.
    *
+   * @remarks
+   *
    * Writes on DynamoDB cost 5x as much as reads for sessions < 1 KB.
    *
    * Writes on DynamoDB cost 20x as much as reads for sessions >= 3 KB and < 4 KB
    * - Reading a 3.5 KB session takes 1 RCUs
    * - Writing that same 3.5 KB session takes 4 WCUs
    *
-   * ```
+   * ### Calculating Write Capacity Units - from AWS Docs
+   *
+   * [Managing settings on DynamoDB provisioned capacity tables](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ProvisionedThroughput.html#ItemSizeCalculations.Writes)
+   *
    * `UpdateItem` — Modifies a single item in the table. DynamoDB considers the size of the item as
    * it appears before and after the update. The provisioned throughput consumed reflects the
    * larger of these item sizes. Even if you update just a subset of the item's attributes,
-   * UpdateItem will still consume the full amount of provisioned throughput (the larger of the
+   * `UpdateItem` will still consume the full amount of provisioned throughput (the larger of the
    * "before" and "after" item sizes).
-   * ```
    *
    * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ProvisionedThroughput.html#ItemSizeCalculations.Writes }
    *
-   * @default 3600 (1 hour) or 10% of the `ttl` if `ttl` is less than 36,000 (10 hours)
+   * @defaultValue 3600 (1 hour) or 10% of the `ttl` if `ttl` is less than 36,000 (10 hours)
    */
   readonly touchAfter?: number;
 
   /**
    * Hash key name of the existing DynamoDB table or name of the hash key
-   * to create if the table does not exist and the createTableOptions
+   * to create if the table does not exist and the `createTableOptions`
    * do not provide a hash key name.
+   *
+   * @defaultValue 'id'
    */
   readonly hashKey?: string;
 
   /**
    * Prefix to add to the `sid` in the `hashKey` written to the DynamoDB table.
    *
-   * @default `sess:`
+   * @defaultValue 'session#'
    */
   readonly prefix?: string;
 
@@ -115,7 +121,7 @@ export interface DynamoDBStoreOptions {
    * @see { @link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html }
    * @see { @link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html}
    *
-   * @default false
+   * @defaultValue false
    */
   readonly useStronglyConsistentReads?: boolean;
 }
@@ -221,6 +227,7 @@ export class DynamoDBStore extends session.Store {
           debug('table %s not active yet: %s', this._tableName, error.message);
         }
 
+        // Wait a bit before we check if the table is ready again
         await sleep(3000);
       }
 
@@ -254,7 +261,7 @@ export class DynamoDBStore extends session.Store {
    * Note: This does not await creation of a table (which should only
    * be used in quick and dirty tests).
    *
-   * @param options
+   * @param options DynamoDBStore options
    */
   constructor(options: DynamoDBStoreOptions) {
     super();
@@ -287,7 +294,7 @@ export class DynamoDBStore extends session.Store {
 
     // Don't await this - the table will either be ready or not on the first request
     // In non-quick-and-dirty tests the table will be created before the application is
-    // every started (via CDK, SAM, CloudFormation, Terraform, etc.)
+    // ever started (via CDK, SAM, CloudFormation, Terraform, etc.)
     if (this._createTableOptions !== undefined) {
       void this.createTableIfNotExists();
     }
@@ -298,7 +305,7 @@ export class DynamoDBStore extends session.Store {
    *
    * Note: Store-created tables is not advised for production use.
    *
-   * @param options
+   * @param options DynamoDBStore options
    */
   public static async create(options: DynamoDBStoreOptions): Promise<DynamoDBStore> {
     const optionsMinusTableOptions = {
