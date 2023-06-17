@@ -13,6 +13,9 @@ import { promisify } from 'util';
 const sleep = promisify(setTimeout);
 const debug = Debug('connect-dynamodb-v3');
 
+/**
+ * DynamoDBStoreOptions are the options for creating a { @link DynamoDBStore }
+ */
 export interface DynamoDBStoreOptions {
   /**
    * AWS v3 SDK DynamoDB client, optionally wrapped with XRay, etc.
@@ -127,7 +130,54 @@ export interface DynamoDBStoreOptions {
 }
 
 /**
- * DynamoDBStore is an express-session store that uses DynamoDB as the backing store.
+ * DynamoDBStore is an [express-session](https://www.npmjs.com/package/express-session) store that uses
+ * [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html)
+ * as the backing store.
+ *
+ * @remarks
+ *
+ * DynamoDB is an excellent choice for session stores because it is
+ * a fully managed service that is highly available, durable, and
+ * can scale automatically (to nearly unlimited levels) to meet demand.
+ *
+ * DynamoDB reads will typically return in 1-3 ms if capacity is set
+ * correctly and the caller is located in the same region as the `Table`.
+ *
+ * ### Example of Pricing
+ *
+ * Disclaimer: perform your own pricing calculation, monitor your costs
+ * while launching, and setup cost alerts to avoid unexpected charges.
+ *
+ * [Saved AWS Pricing Calculation](https://calculator.aws/#/estimate?id=fb2f0d461ab2acd6c98a107059f75a4325918bda)
+ *
+ * Assumptions:
+ * - Using Provisioned Capacity with auto-scaling
+ * - Using Eventually Consistent Reads
+ * - 2 KB average session size
+ * - 100k RPM (requests per minute) average load
+ * - 1 million new sessions per month (~0.4 new sessions / second)
+ * - 8 million existing sessions
+ * - 2 million session updates / expirations per month (~0.8 updates / second)
+ *
+ * Pricing:
+ * - Storage
+ *   - 2 KB * 8 million = 16 GB of storage
+ *   - 16 GB * $0.25 / GB / month = $4 / month for storage
+ * - Reads
+ *   - 100k RPM / 60 seconds = ~1,700 RPS (requests per second)
+ *   - 1 RCU (read capacity unit) per item * 0.5 (eventually consistent reads) = 0.5 RCU per read
+ *   - 1,700 RPS * 0.5 RCU per read = 850 RCUs
+ *   - 850 RCUs / read * 720 hours / month * $0.00013 / RCU / hour = ~$80 / month for reads
+ * - Writes
+ *   - 0.4 new sessions / second + 0.8 updates / second = 1.2 WPS (writes per second)
+ *   - 1.2 WPS * 2 WCU (write capacity unit) per item = 2.4 WCUs
+ *   - Allocate more WCUs to handle bursts
+ *   - 100 WCUs * 720 hours / month * $0.00065 / WCU / hour = ~$50 / month for writes
+ * - Total
+ *   - $4 / month for storage
+ *   - $80 / month for reads
+ *   - $50 / month for writes
+ *   - $134 / month total
  */
 export class DynamoDBStore extends session.Store {
   private _dynamoDBClient: DynamoDBClient;
