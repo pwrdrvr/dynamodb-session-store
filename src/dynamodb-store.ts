@@ -126,7 +126,7 @@ export interface DynamoDBStoreOptions {
 export class DynamoDBStore extends session.Store {
   private _dynamoDBClient: DynamoDBClient;
   private _ddbDocClient: DynamoDBDocument;
-  private _createTableOptions: Partial<CreateTableCommandInput>;
+  private _createTableOptions?: Partial<CreateTableCommandInput>;
 
   private _tableName: string;
   public get tableName(): string {
@@ -175,7 +175,8 @@ export class DynamoDBStore extends session.Store {
         debug('table %s already exists', this._tableName);
         return;
       }
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       debug('table %s does not exist: %s', this._tableName, error.message);
     }
 
@@ -215,7 +216,8 @@ export class DynamoDBStore extends session.Store {
             tableReady = true;
             break;
           }
-        } catch (error) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
           debug('table %s not active yet: %s', this._tableName, error.message);
         }
 
@@ -273,6 +275,7 @@ export class DynamoDBStore extends session.Store {
       debug('reducing touchAfter default to %d seconds', touchAfterDefault);
     }
 
+    this._prefix = options.prefix ?? 'session#';
     this._dynamoDBClient = dynamoDBClient;
     this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient);
     this._tableName = tableName;
@@ -311,7 +314,10 @@ export class DynamoDBStore extends session.Store {
     return store;
   }
 
-  public get(sid: string, callback: (err: unknown, session?: session.SessionData) => void): void {
+  public get(
+    sid: string,
+    callback: (err: unknown, session?: session.SessionData | null) => void,
+  ): void {
     void (async () => {
       try {
         const { Item } = await this._ddbDocClient.get({
@@ -348,9 +354,13 @@ export class DynamoDBStore extends session.Store {
             sess: session,
           },
         });
-        callback(null);
+        if (callback) {
+          callback(null);
+        }
       } catch (error) {
-        callback(error);
+        if (callback) {
+          callback(error);
+        }
       }
     })();
   }
