@@ -372,7 +372,16 @@ export class DynamoDBStore extends session.Store {
   }
 
   public get(
+    /**
+     * Session ID
+     */
     sid: string,
+    /**
+     * Callback to return the session data
+     * @param err Error
+     * @param session Session data
+     * @returns void
+     */
     callback: (err: unknown, session?: session.SessionData | null) => void,
   ): void {
     void (async () => {
@@ -389,10 +398,17 @@ export class DynamoDBStore extends session.Store {
           return callback(null, null);
         }
 
-        // TODO: If session expired, return null
+        // If session expired, return null
+        if (Item.sess.expires && Item.sess.expires < Date.now()) {
+          return callback(null, null);
+        }
 
-        // TODO: If no sessionData, return null
+        // If no sessionData, return null
+        if (!Item.sess.sessionData) {
+          return callback(null, null);
+        }
 
+        // Return the session
         callback(null, Item.sess);
       } catch (err) {
         callback(err);
@@ -400,7 +416,28 @@ export class DynamoDBStore extends session.Store {
     })();
   }
 
-  public set(sid: string, session: session.SessionData, callback?: (err?: unknown) => void): void {
+  public set(
+    /**
+     * Session ID
+     */
+    sid: string,
+    /**
+     * Session data
+     * @remarks
+     * The `expires` field is set by the session middleware and is used
+     * by DynamoDB to automatically expire the session.
+     * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html}
+     * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/howitworks-ttl.html}
+     * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/time-to-live-ttl-how-to.html}
+     */
+    session: session.SessionData,
+    /**
+     * Callback to return an error if the session was not saved
+     * @param err Error
+     * @returns void
+     */
+    callback?: (err?: unknown) => void,
+  ): void {
     void (async () => {
       try {
         await this._ddbDocClient.put({
@@ -422,19 +459,46 @@ export class DynamoDBStore extends session.Store {
     })();
   }
 
+  /**
+   * Update the TTL on the session in DynamoDB
+   *
+   * @remarks
+   * This is called by the session middleware on every request.
+   */
   public touch(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /**
+     * Session ID
+     */
     sid: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /**
+     * Session data
+     */
     session: session.SessionData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /**
+     * Callback to return an error if the session TTL was not updated
+     */
     callback?: (err?: unknown) => void,
   ): void {
+    // Update the TTL on the session in DynamoDB
+
     throw new Error('Method not implemented.');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public destroy(sid: string, callback?: (err?: unknown) => void): void {
+  /**
+   * Destroy the session in DynamoDB
+   */
+  public destroy(
+    /**
+     * Session ID
+     */
+    sid: string,
+    /**
+     * Callback to return an error if the session was not destroyed
+     * @param err Error
+     * @returns void
+     */
+    callback?: (err?: unknown) => void,
+  ): void {
     throw new Error('Method not implemented.');
   }
 }
