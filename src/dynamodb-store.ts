@@ -120,6 +120,9 @@ export interface DynamoDBStoreOptions {
   readonly useStronglyConsistentReads?: boolean;
 }
 
+/**
+ * DynamoDBStore is an express-session store that uses DynamoDB as the backing store.
+ */
 export class DynamoDBStore extends session.Store {
   private _dynamoDBClient: DynamoDBClient;
   private _ddbDocClient: DynamoDBDocument;
@@ -160,7 +163,6 @@ export class DynamoDBStore extends session.Store {
 
   /**
    * Create the table if it does not exist
-   * @returns
    */
   private async createTableIfNotExists() {
     try {
