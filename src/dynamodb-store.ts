@@ -402,12 +402,12 @@ export class DynamoDBStore extends session.Store {
         }
 
         // If session expired, return null
-        if (Item.sess.expires && Item.sess.expires < Date.now()) {
+        if (Item.expires && Item.expires < Date.now()) {
           return callback(null, null);
         }
 
         // If no sessionData, return null
-        if (!Item.sess.sessionData) {
+        if (!Item.sess) {
           return callback(null, null);
         }
 
@@ -448,7 +448,7 @@ export class DynamoDBStore extends session.Store {
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
             // Note: DynamoDB uses seconds since epoch for the expires field
-            expires: session.cookie.expires ? session.cookie.expires.getTime() / 1000 : 0,
+            expires: session.cookie?.expires ? session.cookie.expires.getTime() / 1000 : 0,
             sess: session,
           },
         });
