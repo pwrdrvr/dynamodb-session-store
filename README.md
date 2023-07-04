@@ -16,6 +16,15 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
     - Eventually Consistent Read of 4 KB takes 0.5 RCU
     - Write of 1 KB takes 1 WCU, write of 4 KB takes 4 WCU
 
-# Schedule
+# Running Examples
 
-Aiming to complete by 2022-05-30.
+## [express](./examples/express)
+
+1. Create DynamoDB Table using AWS Console or any other method
+   1. Default name is `connect-dynamodb-v3-test`
+   2. Default partition key is `id`
+   3. No sort key
+   5. On-demand throughput is sufficient for the example, although not suggested for high volume use
+   6. Time to live can be turned on for a field named `expires`
+2. `npm run example:express`
+   1. If the table name was changed: `TABLE_NAME=my-table-name npm run example:express`

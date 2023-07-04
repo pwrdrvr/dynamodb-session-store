@@ -22,6 +22,12 @@
     "allowJs": false,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
+
+    // Allow referencing @pwrdrvr/connect-dynamodb-v3 in examples
+    "baseUrl": ".",
+    "paths": {
+      "@pwrdrvr/connect-dynamodb-v3": ["src"]
+    }
   },
   "exclude": ["node_modules/*", "dist"]
 }

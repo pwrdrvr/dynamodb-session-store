@@ -190,6 +190,9 @@ export class DynamoDBStore extends session.Store {
   }
 
   private _touchAfter: number;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.touchAfter }
+   */
   public get touchAfter(): number {
     return this._touchAfter;
   }
@@ -319,7 +322,7 @@ export class DynamoDBStore extends session.Store {
     const {
       dynamoDBClient = new DynamoDBClient({}),
       tableName = 'sessions',
-      ttl = 1209600,
+      ttl = 1209600, // 2 weeks
       touchAfter,
       createTableOptions,
       hashKey = 'id',
@@ -444,7 +447,8 @@ export class DynamoDBStore extends session.Store {
           TableName: this._tableName,
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
-            // TODO: expires field
+            // Note: DynamoDB uses seconds since epoch for the expires field
+            expires: session.cookie.expires ? session.cookie.expires.getTime() / 1000 : 0,
             sess: session,
           },
         });
@@ -479,9 +483,40 @@ export class DynamoDBStore extends session.Store {
      */
     callback?: (err?: unknown) => void,
   ): void {
-    // Update the TTL on the session in DynamoDB
+    void (async () => {
+      try {
+        const expiresSecs = session.cookie.expires ? session.cookie.expires.getTime() / 1000 : 0;
+        const currentTimeSecs = Date.now() / 1000;
 
-    throw new Error('Method not implemented.');
+        // Update the TTL only if the expiration timestamp is less than (ttl - touchAfter) seconds away
+        if (expiresSecs - currentTimeSecs < this._ttl - this._touchAfter) {
+          const newExpires =
+            typeof session.cookie.maxAge === 'number'
+              ? currentTimeSecs + session.cookie.maxAge
+              : this._ttl * 1000 + currentTimeSecs;
+
+          await this._ddbDocClient.update({
+            TableName: this._tableName,
+            Key: {
+              [this._hashKey]: `${this._prefix}${sid}`,
+            },
+            UpdateExpression: 'set sess.expires = :e',
+            ExpressionAttributeValues: {
+              ':e': newExpires,
+            },
+            ReturnValues: 'UPDATED_NEW',
+          });
+        }
+
+        if (callback) {
+          callback(null);
+        }
+      } catch (err) {
+        if (callback) {
+          callback(err);
+        }
+      }
+    })();
   }
 
   /**
@@ -499,6 +534,22 @@ export class DynamoDBStore extends session.Store {
      */
     callback?: (err?: unknown) => void,
   ): void {
-    throw new Error('Method not implemented.');
+    void (async () => {
+      try {
+        await this._ddbDocClient.delete({
+          TableName: this._tableName,
+          Key: {
+            [this._hashKey]: `${this._prefix}${sid}`,
+          },
+        });
+        if (callback) {
+          callback(null);
+        }
+      } catch (err) {
+        if (callback) {
+          callback(err);
+        }
+      }
+    })();
   }
 }
