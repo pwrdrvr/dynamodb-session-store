@@ -454,7 +454,10 @@ export class DynamoDBStore extends session.Store {
             expires: session.cookie?.expires
               ? Math.floor(session.cookie.expires.getTime() / 1000)
               : 0,
-            sess: session,
+            // The `cookie` object is not marshalled correctly by the DynamoDBDocument client
+            // so we strip the fields that we don't want and make sure the `expires` field
+            // is turned into a string
+            sess: { ...session, cookie: { ...JSON.parse(JSON.stringify(session.cookie)) } },
           },
         });
         if (callback) {

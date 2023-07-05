@@ -21,9 +21,10 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
 ## [express](./examples/express)
 
 1. Create DynamoDB Table using AWS Console or any other method
-   1. Default name is `connect-dynamodb-v3-test`
-   2. Default partition key is `id`
-   3. No sort key
+   1. AWS CLI Example: ```aws dynamodb create-table --table-name connect-dynamodb-v3-test --attribute-definitions AttributeName=id,AttributeType=S --key-schema AttributeName=id,KeyType=HASH --billing-mode PAY_PER_REQUEST```
+   2. Default name is `connect-dynamodb-v3-test`
+   3. Default partition key is `id`
+   4. No sort key
    5. On-demand throughput is sufficient for the example, although not suggested for high volume use
    6. Time to live can be turned on for a field named `expires`
 2. `npm run example:express`

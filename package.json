@@ -29,6 +29,7 @@
     "build": "tsc --build tsconfig.json && echo 'examples/\n*.tsbuildinfo\n*.spec.*' > dist/.npmignore",
     "build:docs": "typedoc src/index.ts",
     "example:express": "TABLE_NAME=${TABLE_NAME:-connect-dynamodb-v3-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/express.ts",
+    "example:other": "TABLE_NAME=${TABLE_NAME:-connect-dynamodb-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/other.ts",
     "lint": "eslint ./ --ext .ts --ext .tsx",
     "lint-and-fix": "eslint ./ --ext .ts --ext .tsx --fix",
     "test": "AWS_EMF_ENVIRONMENT=Local jest"
@@ -61,6 +62,7 @@
     "@typescript-eslint/eslint-plugin": "5.59.11",
     "@typescript-eslint/parser": "5.59.11",
     "aws-sdk-client-mock": "2.1.1",
+    "connect-dynamodb": "3.0.0",
     "eslint": "8.42.0",
     "eslint-config-prettier": "8.8.0",
     "eslint-import-resolver-node": "0.3.7",
