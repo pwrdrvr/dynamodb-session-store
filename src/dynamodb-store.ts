@@ -222,6 +222,13 @@ export class DynamoDBStore extends session.Store {
 
   /**
    * Create the table if it does not exist
+   * Enable TTL field on the table if configured
+   *
+   * @remarks
+   * This is not recommended for production use.
+   *
+   * For production the table shouljd be created with IaaC (infrastructure as code)
+   * such as AWS CDK, SAM, CloudFormation, Terraform, etc.
    */
   private async createTableIfNotExists() {
     try {
@@ -315,6 +322,9 @@ export class DynamoDBStore extends session.Store {
    * be used in quick and dirty tests).
    *
    * @param options DynamoDBStore options
+   *
+   * @remarks
+   * `createTableOptions` is not recommended for production use.
    */
   constructor(options: DynamoDBStoreOptions) {
     super();
@@ -322,7 +332,7 @@ export class DynamoDBStore extends session.Store {
     const {
       dynamoDBClient = new DynamoDBClient({}),
       tableName = 'sessions',
-      ttl = 1209600, // 2 weeks
+      ttl = 1209600, // 2 weeks in seconds
       touchAfter,
       createTableOptions,
       hashKey = 'id',
@@ -486,10 +496,10 @@ export class DynamoDBStore extends session.Store {
   }
 
   /**
-   * Update the TTL on the session in DynamoDB
+   * Reset the TTL on the DynamoDB record to 100% of the original TTL
    *
    * @remarks
-   * This is called by the session middleware on every request.
+   * This is called by the session middleware on every single `get` request.
    */
   public touch(
     /**
@@ -507,13 +517,18 @@ export class DynamoDBStore extends session.Store {
   ): void {
     void (async () => {
       try {
-        const expiresSecs = session.cookie.expires
+        const expiresTimeSecs = session.cookie.expires
           ? Math.floor(session.cookie.expires.getTime() / 1000)
           : 0;
         const currentTimeSecs = Math.floor(Date.now() / 1000);
 
-        // Update the TTL only if the expiration timestamp is less than (ttl - touchAfter) seconds away
-        if (expiresSecs - currentTimeSecs < this._ttl - this._touchAfter) {
+        // Compute how much time has passed since this session was last touched
+        const timePassedSecs = currentTimeSecs + this._ttl - expiresTimeSecs;
+
+        // Update the TTL only if touchAfter
+        // seconds have passed since the TTL was last updated
+
+        if (timePassedSecs > this._touchAfter) {
           const newExpires =
             typeof session.cookie.maxAge === 'number'
               ? currentTimeSecs + session.cookie.maxAge
@@ -531,7 +546,6 @@ export class DynamoDBStore extends session.Store {
             ReturnValues: 'UPDATED_NEW',
           });
         }
-
         if (callback) {
           callback(null);
         }
