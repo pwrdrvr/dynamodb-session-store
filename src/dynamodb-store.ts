@@ -451,7 +451,9 @@ export class DynamoDBStore extends session.Store {
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
             // Note: DynamoDB uses seconds since epoch for the expires field
-            expires: session.cookie?.expires ? session.cookie.expires.getTime() / 1000 : 0,
+            expires: session.cookie?.expires
+              ? Math.floor(session.cookie.expires.getTime() / 1000)
+              : 0,
             sess: session,
           },
         });
@@ -488,8 +490,10 @@ export class DynamoDBStore extends session.Store {
   ): void {
     void (async () => {
       try {
-        const expiresSecs = session.cookie.expires ? session.cookie.expires.getTime() / 1000 : 0;
-        const currentTimeSecs = Date.now() / 1000;
+        const expiresSecs = session.cookie.expires
+          ? Math.floor(session.cookie.expires.getTime() / 1000)
+          : 0;
+        const currentTimeSecs = Math.floor(Date.now() / 1000);
 
         // Update the TTL only if the expiration timestamp is less than (ttl - touchAfter) seconds away
         if (expiresSecs - currentTimeSecs < this._ttl - this._touchAfter) {
