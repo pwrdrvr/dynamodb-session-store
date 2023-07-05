@@ -34,13 +34,16 @@ export interface DynamoDBStoreOptions {
   /**
    * Time to live for sessions in seconds.
    *
+   * @remarks
+   *
    * The IaaC (infrastructure as code) that creates the DynamoDB table
    * should set the TimeToLive configuration for the Table to use the field
    * `expires`.
    *
    * The DynamoDB built-in mechanism for TTL is the only way that records
-   * will ever be automatically aged out.  Scanning and deleting is
-   * incredibly expensive and inefficient and is not provided as an option.
+   * will ever be automatically aged out.  However, expired records
+   * read from the DB (even if TTL is not enabled on the Table) will not
+   * be returned to the caller.
    *
    * @defaultValue 1209600 (2 weeks)
    */
@@ -470,9 +473,9 @@ export class DynamoDBStore extends session.Store {
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
             // Note: DynamoDB uses seconds since epoch for the expires field
-            expires: session.cookie?.expires
-              ? Math.floor(session.cookie.expires.getTime() / 1000)
-              : 0,
+            ...(this.ttl
+              ? { expires: Math.floor(new Date(Date.now() + this.ttl * 1000).getTime() / 1000) }
+              : {}),
             // The `cookie` object is not marshalled correctly by the DynamoDBDocument client
             // so we strip the fields that we don't want and make sure the `expires` field
             // is turned into a string
@@ -517,9 +520,8 @@ export class DynamoDBStore extends session.Store {
   ): void {
     void (async () => {
       try {
-        const expiresTimeSecs = session.cookie.expires
-          ? Math.floor(session.cookie.expires.getTime() / 1000)
-          : 0;
+        // @ts-expect-error expires may exist
+        const expiresTimeSecs = session.expires ? session.expires : 0;
         const currentTimeSecs = Math.floor(Date.now() / 1000);
 
         // Compute how much time has passed since this session was last touched
@@ -529,10 +531,7 @@ export class DynamoDBStore extends session.Store {
         // seconds have passed since the TTL was last updated
 
         if (timePassedSecs > this._touchAfter) {
-          const newExpires =
-            typeof session.cookie.maxAge === 'number'
-              ? currentTimeSecs + session.cookie.maxAge
-              : this._ttl * 1000 + currentTimeSecs;
+          const newExpires = this._ttl * 1000 + currentTimeSecs;
 
           await this._ddbDocClient.update({
             TableName: this._tableName,

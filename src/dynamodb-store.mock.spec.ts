@@ -339,7 +339,6 @@ describe('mock AWS API', () => {
             cookie: {
               expires: new Date(Date.now() + 1000 * (14 * 24 - 4) * 60 * 60),
             },
-            expires: Date.now() + 1000 * (14 * 24 - 4) * 60 * 60,
           },
           (err) => {
             expect(err).toBeNull();
