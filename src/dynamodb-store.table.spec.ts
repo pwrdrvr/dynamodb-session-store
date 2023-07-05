@@ -171,7 +171,7 @@ describe('dynamodb-store - table via jest-dynalite', () => {
                       expect(err2).toBeNull();
                       expect(session2).not.toBeNull();
 
-                      // TODO: Read the item from the table and check the TTL
+                      // Read the item from the table and check the TTL
                       ddbDocClient
                         .send(new GetCommand({ TableName: tableName, Key: { id: 'session#123' } }))
                         .then(({ Item }) => {
