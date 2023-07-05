@@ -524,7 +524,7 @@ export class DynamoDBStore extends session.Store {
             Key: {
               [this._hashKey]: `${this._prefix}${sid}`,
             },
-            UpdateExpression: 'set expires = :e, sess.expires = :e',
+            UpdateExpression: 'set expires = :e',
             ExpressionAttributeValues: {
               ':e': newExpires,
             },
