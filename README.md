@@ -58,6 +58,9 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
 
 ## Example `@pwrdrvr/dynamodb-session-store` DB Record
 
+<img width="1236" alt="image" src="https://github.com/pwrdrvr/connect-dynamodb-v3/assets/5617868/fdc9e6b4-4b28-4562-bf51-48b43d5555b1">
+
+
 ```json
 {
   "id": "123",
@@ -75,6 +78,8 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
 ```
 
 ## Example `dynamodb-connect` DB Record
+
+<img width="1236" alt="image" src="https://github.com/pwrdrvr/connect-dynamodb-v3/assets/5617868/7815582a-c12a-49ec-83c0-323d76d441a6">
 
 ```json
 {
