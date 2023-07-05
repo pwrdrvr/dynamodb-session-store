@@ -66,9 +66,9 @@ module.exports = {
   // globals: {},
   globals: {
     'ts-jest': {
-      tsconfig: 'tsconfig.packages.json',
+      tsconfig: 'tsconfig.json',
       // Reduces test time from 85 seconds to 20-25 seconds on a 2018 MacBook Pro 13" Core i7
-      isolatedModules: true
+      isolatedModules: true,
     },
   },
 
@@ -132,7 +132,7 @@ module.exports = {
   // roots: [
   //   "<rootDir>"
   // ],
-  roots: ['<rootDir>packages/'],
+  roots: ['<rootDir>src/'],
 
   // Allows you to use a custom runner instead of Jest's default test runner
   // runner: "jest-runner",

@@ -22,13 +22,12 @@ jobs:
         with:
           path: |
             node_modules
-            packages/**/node_modules
             !node_modules/.cache
-          key: node-modules-${{ hashFiles('package.json', 'yarn.lock', 'patches/*') }}
+          key: node-modules-${{ hashFiles('package.json', 'package-lock.json') }}
 
       - name: Install Modules
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Use the Release Tag Version
         run: |

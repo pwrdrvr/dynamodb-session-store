@@ -11,20 +11,23 @@ import Debug from 'debug';
 import { promisify } from 'util';
 
 const sleep = promisify(setTimeout);
-const debug = Debug('connect-dynamodb-v3');
+const debug = Debug('@pwrdrvr/dynamodb-session-store');
 
+/**
+ * DynamoDBStoreOptions are the options for creating a { @link DynamoDBStore }
+ */
 export interface DynamoDBStoreOptions {
   /**
    * AWS v3 SDK DynamoDB client, optionally wrapped with XRay, etc.
    *
-   * @default - new DynamoDBClient({})
+   * @default new DynamoDBClient({})
    */
   readonly dynamoDBClient?: DynamoDBClient;
 
   /**
    * Name of the DynamoDB table to use (and optionally create)
    *
-   * @default sessions
+   * @defaultValue 'sessions'
    */
   readonly tableName?: string;
 
@@ -39,7 +42,7 @@ export interface DynamoDBStoreOptions {
    * will ever be automatically aged out.  Scanning and deleting is
    * incredibly expensive and inefficient and is not provided as an option.
    *
-   * @default 1209600 (2 weeks)
+   * @defaultValue 1209600 (2 weeks)
    */
   readonly ttl?: number;
 
@@ -49,37 +52,43 @@ export interface DynamoDBStoreOptions {
    *
    * Set to `0` to always update the session TTL. - This is not suggested.
    *
+   * @remarks
+   *
    * Writes on DynamoDB cost 5x as much as reads for sessions < 1 KB.
    *
    * Writes on DynamoDB cost 20x as much as reads for sessions >= 3 KB and < 4 KB
    * - Reading a 3.5 KB session takes 1 RCUs
    * - Writing that same 3.5 KB session takes 4 WCUs
    *
-   * ```
+   * ### Calculating Write Capacity Units - from AWS Docs
+   *
+   * [Managing settings on DynamoDB provisioned capacity tables](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ProvisionedThroughput.html#ItemSizeCalculations.Writes)
+   *
    * `UpdateItem` — Modifies a single item in the table. DynamoDB considers the size of the item as
    * it appears before and after the update. The provisioned throughput consumed reflects the
    * larger of these item sizes. Even if you update just a subset of the item's attributes,
-   * UpdateItem will still consume the full amount of provisioned throughput (the larger of the
+   * `UpdateItem` will still consume the full amount of provisioned throughput (the larger of the
    * "before" and "after" item sizes).
-   * ```
    *
    * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ProvisionedThroughput.html#ItemSizeCalculations.Writes }
    *
-   * @default 3600 (1 hour) or 10% of the `ttl` if `ttl` is less than 36,000 (10 hours)
+   * @defaultValue 3600 (1 hour) or 10% of the `ttl` if `ttl` is less than 36,000 (10 hours)
    */
   readonly touchAfter?: number;
 
   /**
    * Hash key name of the existing DynamoDB table or name of the hash key
-   * to create if the table does not exist and the createTableOptions
+   * to create if the table does not exist and the `createTableOptions`
    * do not provide a hash key name.
+   *
+   * @defaultValue 'id'
    */
   readonly hashKey?: string;
 
   /**
    * Prefix to add to the `sid` in the `hashKey` written to the DynamoDB table.
    *
-   * @default `sess:`
+   * @defaultValue 'session#'
    */
   readonly prefix?: string;
 
@@ -115,15 +124,65 @@ export interface DynamoDBStoreOptions {
    * @see { @link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadConsistency.html }
    * @see { @link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.ReadWriteCapacityMode.html}
    *
-   * @default false
+   * @defaultValue false
    */
   readonly useStronglyConsistentReads?: boolean;
 }
 
+/**
+ * DynamoDBStore is an [express-session](https://www.npmjs.com/package/express-session) store that uses
+ * [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html)
+ * as the backing store.
+ *
+ * @remarks
+ *
+ * DynamoDB is an excellent choice for session stores because it is
+ * a fully managed service that is highly available, durable, and
+ * can scale automatically (to nearly unlimited levels) to meet demand.
+ *
+ * DynamoDB reads will typically return in 1-3 ms if capacity is set
+ * correctly and the caller is located in the same region as the `Table`.
+ *
+ * ### Example of Pricing
+ *
+ * Disclaimer: perform your own pricing calculation, monitor your costs
+ * while launching, and setup cost alerts to avoid unexpected charges.
+ *
+ * [Saved AWS Pricing Calculation](https://calculator.aws/#/estimate?id=fb2f0d461ab2acd6c98a107059f75a4325918bda)
+ *
+ * Assumptions:
+ * - Using Provisioned Capacity with auto-scaling
+ * - Using Eventually Consistent Reads
+ * - 2 KB average session size
+ * - 100k RPM (requests per minute) average load
+ * - 1 million new sessions per month (~0.4 new sessions / second)
+ * - 8 million existing sessions
+ * - 2 million session updates / expirations per month (~0.8 updates / second)
+ *
+ * Pricing:
+ * - Storage
+ *   - 2 KB * 8 million = 16 GB of storage
+ *   - 16 GB * $0.25 / GB / month = $4 / month for storage
+ * - Reads
+ *   - 100k RPM / 60 seconds = ~1,700 RPS (requests per second)
+ *   - 1 RCU (read capacity unit) per item * 0.5 (eventually consistent reads) = 0.5 RCU per read
+ *   - 1,700 RPS * 0.5 RCU per read = 850 RCUs
+ *   - 850 RCUs / read * 720 hours / month * $0.00013 / RCU / hour = ~$80 / month for reads
+ * - Writes
+ *   - 0.4 new sessions / second + 0.8 updates / second = 1.2 WPS (writes per second)
+ *   - 1.2 WPS * 2 WCU (write capacity unit) per item = 2.4 WCUs
+ *   - Allocate more WCUs to handle bursts
+ *   - 100 WCUs * 720 hours / month * $0.00065 / WCU / hour = ~$50 / month for writes
+ * - Total
+ *   - $4 / month for storage
+ *   - $80 / month for reads
+ *   - $50 / month for writes
+ *   - $134 / month total
+ */
 export class DynamoDBStore extends session.Store {
   private _dynamoDBClient: DynamoDBClient;
   private _ddbDocClient: DynamoDBDocument;
-  private _createTableOptions: Partial<CreateTableCommandInput>;
+  private _createTableOptions?: Partial<CreateTableCommandInput>;
 
   private _tableName: string;
   public get tableName(): string {
@@ -131,6 +190,9 @@ export class DynamoDBStore extends session.Store {
   }
 
   private _touchAfter: number;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.touchAfter }
+   */
   public get touchAfter(): number {
     return this._touchAfter;
   }
@@ -160,7 +222,13 @@ export class DynamoDBStore extends session.Store {
 
   /**
    * Create the table if it does not exist
-   * @returns
+   * Enable TTL field on the table if configured
+   *
+   * @remarks
+   * This is not recommended for production use.
+   *
+   * For production the table shouljd be created with IaaC (infrastructure as code)
+   * such as AWS CDK, SAM, CloudFormation, Terraform, etc.
    */
   private async createTableIfNotExists() {
     try {
@@ -173,7 +241,8 @@ export class DynamoDBStore extends session.Store {
         debug('table %s already exists', this._tableName);
         return;
       }
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       debug('table %s does not exist: %s', this._tableName, error.message);
     }
 
@@ -213,10 +282,12 @@ export class DynamoDBStore extends session.Store {
             tableReady = true;
             break;
           }
-        } catch (error) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
           debug('table %s not active yet: %s', this._tableName, error.message);
         }
 
+        // Wait a bit before we check if the table is ready again
         await sleep(3000);
       }
 
@@ -250,7 +321,10 @@ export class DynamoDBStore extends session.Store {
    * Note: This does not await creation of a table (which should only
    * be used in quick and dirty tests).
    *
-   * @param options
+   * @param options DynamoDBStore options
+   *
+   * @remarks
+   * `createTableOptions` is not recommended for production use.
    */
   constructor(options: DynamoDBStoreOptions) {
     super();
@@ -258,7 +332,7 @@ export class DynamoDBStore extends session.Store {
     const {
       dynamoDBClient = new DynamoDBClient({}),
       tableName = 'sessions',
-      ttl = 1209600,
+      ttl = 1209600, // 2 weeks in seconds
       touchAfter,
       createTableOptions,
       hashKey = 'id',
@@ -271,8 +345,11 @@ export class DynamoDBStore extends session.Store {
       debug('reducing touchAfter default to %d seconds', touchAfterDefault);
     }
 
+    this._prefix = options.prefix ?? 'session#';
     this._dynamoDBClient = dynamoDBClient;
-    this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient);
+    this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient, {
+      marshallOptions: { removeUndefinedValues: true, convertClassInstanceToMap: true },
+    });
     this._tableName = tableName;
     this._ttl = ttl;
     this._touchAfter = touchAfter ?? touchAfterDefault;
@@ -282,7 +359,7 @@ export class DynamoDBStore extends session.Store {
 
     // Don't await this - the table will either be ready or not on the first request
     // In non-quick-and-dirty tests the table will be created before the application is
-    // every started (via CDK, SAM, CloudFormation, Terraform, etc.)
+    // ever started (via CDK, SAM, CloudFormation, Terraform, etc.)
     if (this._createTableOptions !== undefined) {
       void this.createTableIfNotExists();
     }
@@ -293,7 +370,7 @@ export class DynamoDBStore extends session.Store {
    *
    * Note: Store-created tables is not advised for production use.
    *
-   * @param options
+   * @param options DynamoDBStore options
    */
   public static async create(options: DynamoDBStoreOptions): Promise<DynamoDBStore> {
     const optionsMinusTableOptions = {
@@ -309,7 +386,19 @@ export class DynamoDBStore extends session.Store {
     return store;
   }
 
-  public get(sid: string, callback: (err: unknown, session?: session.SessionData) => void): void {
+  public get(
+    /**
+     * Session ID
+     */
+    sid: string,
+    /**
+     * Callback to return the session data
+     * @param err Error
+     * @param session Session data
+     * @returns void
+     */
+    callback: (err: unknown, session?: session.SessionData | null) => void,
+  ): void {
     void (async () => {
       try {
         const { Item } = await this._ddbDocClient.get({
@@ -324,10 +413,27 @@ export class DynamoDBStore extends session.Store {
           return callback(null, null);
         }
 
-        // TODO: If session expired, return null
+        // If session expired, return null
+        // Note: DynamoDB uses seconds since epoch for the TTL field value
+        if (Item.expires && Item.expires * 1000 < Date.now()) {
+          return callback(null, null);
+        }
 
-        // TODO: If no sessionData, return null
+        // If no sessionData, return null
+        if (!Item.sess) {
+          return callback(null, null);
+        }
 
+        // If the sessionData is a string, try to parse it as JSON
+        if (typeof Item.sess === 'string') {
+          try {
+            Item.sess = JSON.parse(Item.sess);
+          } catch (err) {
+            return callback(err);
+          }
+        }
+
+        // Return the session
         callback(null, Item.sess);
       } catch (err) {
         callback(err);
@@ -335,37 +441,153 @@ export class DynamoDBStore extends session.Store {
     })();
   }
 
-  public set(sid: string, session: session.SessionData, callback?: (err?: unknown) => void): void {
+  public set(
+    /**
+     * Session ID
+     */
+    sid: string,
+    /**
+     * Session data
+     * @remarks
+     * The `expires` field is set by the session middleware and is used
+     * by DynamoDB to automatically expire the session.
+     * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/TTL.html}
+     * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/howitworks-ttl.html}
+     * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/time-to-live-ttl-how-to.html}
+     */
+    session: session.SessionData,
+    /**
+     * Callback to return an error if the session was not saved
+     * @param err Error
+     * @returns void
+     */
+    callback?: (err?: unknown) => void,
+  ): void {
     void (async () => {
       try {
         await this._ddbDocClient.put({
           TableName: this._tableName,
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
-            // TODO: expires field
-            sess: session,
+            // Note: DynamoDB uses seconds since epoch for the expires field
+            expires: session.cookie?.expires
+              ? Math.floor(session.cookie.expires.getTime() / 1000)
+              : 0,
+            // The `cookie` object is not marshalled correctly by the DynamoDBDocument client
+            // so we strip the fields that we don't want and make sure the `expires` field
+            // is turned into a string
+            sess: {
+              ...session,
+              ...(session.cookie
+                ? { cookie: { ...JSON.parse(JSON.stringify(session.cookie)) } }
+                : {}),
+            },
           },
         });
-        callback(null);
+        if (callback) {
+          callback(null);
+        }
       } catch (error) {
-        callback(error);
+        if (callback) {
+          callback(error);
+        }
       }
     })();
   }
 
+  /**
+   * Reset the TTL on the DynamoDB record to 100% of the original TTL
+   *
+   * @remarks
+   * This is called by the session middleware on every single `get` request.
+   */
   public touch(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /**
+     * Session ID
+     */
     sid: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /**
+     * Session data
+     */
     session: session.SessionData,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    /**
+     * Callback to return an error if the session TTL was not updated
+     */
     callback?: (err?: unknown) => void,
   ): void {
-    throw new Error('Method not implemented.');
+    void (async () => {
+      try {
+        const expiresTimeSecs = session.cookie.expires
+          ? Math.floor(session.cookie.expires.getTime() / 1000)
+          : 0;
+        const currentTimeSecs = Math.floor(Date.now() / 1000);
+
+        // Compute how much time has passed since this session was last touched
+        const timePassedSecs = currentTimeSecs + this._ttl - expiresTimeSecs;
+
+        // Update the TTL only if touchAfter
+        // seconds have passed since the TTL was last updated
+
+        if (timePassedSecs > this._touchAfter) {
+          const newExpires =
+            typeof session.cookie.maxAge === 'number'
+              ? currentTimeSecs + session.cookie.maxAge
+              : this._ttl * 1000 + currentTimeSecs;
+
+          await this._ddbDocClient.update({
+            TableName: this._tableName,
+            Key: {
+              [this._hashKey]: `${this._prefix}${sid}`,
+            },
+            UpdateExpression: 'set expires = :e',
+            ExpressionAttributeValues: {
+              ':e': newExpires,
+            },
+            ReturnValues: 'UPDATED_NEW',
+          });
+        }
+        if (callback) {
+          callback(null);
+        }
+      } catch (err) {
+        if (callback) {
+          callback(err);
+        }
+      }
+    })();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public destroy(sid: string, callback?: (err?: unknown) => void): void {
-    throw new Error('Method not implemented.');
+  /**
+   * Destroy the session in DynamoDB
+   */
+  public destroy(
+    /**
+     * Session ID
+     */
+    sid: string,
+    /**
+     * Callback to return an error if the session was not destroyed
+     * @param err Error
+     * @returns void
+     */
+    callback?: (err?: unknown) => void,
+  ): void {
+    void (async () => {
+      try {
+        await this._ddbDocClient.delete({
+          TableName: this._tableName,
+          Key: {
+            [this._hashKey]: `${this._prefix}${sid}`,
+          },
+        });
+        if (callback) {
+          callback(null);
+        }
+      } catch (err) {
+        if (callback) {
+          callback(err);
+        }
+      }
+    })();
   }
 }

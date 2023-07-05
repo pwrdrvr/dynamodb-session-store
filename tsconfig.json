@@ -1,8 +1,33 @@
 {
-  "files": [],
-  "references": [
-    {
-      "path": "packages/connect-dynamodb-v3/"
-    },
-  ]
+  "compilerOptions": {
+    "rootDirs": ["src", "examples"],
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+
+    "importHelpers": true,
+    "composite": true,
+    "target": "es2018",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    "allowJs": false,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Allow referencing @pwrdrvr/dynamodb-session-store in examples
+    "baseUrl": ".",
+    "paths": {
+      "@pwrdrvr/dynamodb-session-store": ["src"]
+    }
+  },
+  "exclude": ["node_modules/*", "dist"]
 }

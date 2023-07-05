@@ -18,7 +18,7 @@ describe('dynamodb-store - table via jest-dynalite', () => {
     dynamoClient.destroy();
   }, 20000);
 
-  describe('initialization', () => {
+  describe('table', () => {
     it('uses existing table - record not found', (done) => {
       const store = new DynamoDBStore({
         dynamoDBClient: dynamoClient,
