@@ -11,6 +11,15 @@ const dynamoDBClient = new dynamodb.DynamoDBClient({});
 const app = express();
 const port = 3001;
 
+// Augment the session data with our own properties
+// Note: we can't do this because it changes the type in all files of the project
+// declare module 'express-session' {
+//   interface SessionData {
+//     user: string;
+//     animal: 'cow' | 'pig';
+//   }
+// }
+
 app.use(
   session({
     store: new DynamoDBStore({
@@ -36,7 +45,7 @@ app.use(
 // Add a fake login route that will set a session cookie
 app.get('/login', (req, res) => {
   console.log(`Session ID: ${req.session?.id}`);
-  // @ts-expect-error yeah
+  // @ts-expect-error user is defined
   req.session.user = 'test';
   res.send('Logged in');
 });

@@ -414,6 +414,15 @@ export class DynamoDBStore extends session.Store {
           return callback(null, null);
         }
 
+        // If the sessionData is a string, try to parse it as JSON
+        if (typeof Item.sess === 'string') {
+          try {
+            Item.sess = JSON.parse(Item.sess);
+          } catch (err) {
+            return callback(err);
+          }
+        }
+
         // Return the session
         callback(null, Item.sess);
       } catch (err) {
@@ -457,7 +466,12 @@ export class DynamoDBStore extends session.Store {
             // The `cookie` object is not marshalled correctly by the DynamoDBDocument client
             // so we strip the fields that we don't want and make sure the `expires` field
             // is turned into a string
-            sess: { ...session, cookie: { ...JSON.parse(JSON.stringify(session.cookie)) } },
+            sess: {
+              ...session,
+              ...(session.cookie
+                ? { cookie: { ...JSON.parse(JSON.stringify(session.cookie)) } }
+                : {}),
+            },
           },
         });
         if (callback) {
