@@ -1,10 +1,10 @@
 /* eslint-disable no-console */
 import session from 'express-session';
-import { DynamoDBStore } from '@pwrdrvr/connect-dynamodb-v3';
+import { DynamoDBStore } from '@pwrdrvr/dynamodb-session-store';
 import * as dynamodb from '@aws-sdk/client-dynamodb';
 import express from 'express';
 
-const { TABLE_NAME = 'connect-dynamodb-v3-test', PORT = '3001' } = process.env;
+const { TABLE_NAME = 'dynamodb-session-store-test', PORT = '3001' } = process.env;
 
 const dynamoDBClient = new dynamodb.DynamoDBClient({});
 

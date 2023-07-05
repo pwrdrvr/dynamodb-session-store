@@ -11,7 +11,7 @@ import Debug from 'debug';
 import { promisify } from 'util';
 
 const sleep = promisify(setTimeout);
-const debug = Debug('connect-dynamodb-v3');
+const debug = Debug('@pwrdrvr/dynamodb-session-store');
 
 /**
  * DynamoDBStoreOptions are the options for creating a { @link DynamoDBStore }

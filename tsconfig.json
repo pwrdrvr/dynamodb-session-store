@@ -23,10 +23,10 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
 
-    // Allow referencing @pwrdrvr/connect-dynamodb-v3 in examples
+    // Allow referencing @pwrdrvr/dynamodb-session-store in examples
     "baseUrl": ".",
     "paths": {
-      "@pwrdrvr/connect-dynamodb-v3": ["src"]
+      "@pwrdrvr/dynamodb-session-store": ["src"]
     }
   },
   "exclude": ["node_modules/*", "dist"]

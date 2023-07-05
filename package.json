@@ -1,7 +1,7 @@
 {
-  "name": "@pwrdrvr/dynamodb-connect-v3",
+  "name": "@pwrdrvr/dynamodb-session-store",
   "version": "0.0.0",
-  "description": "express-session library for DynamoDB, with reduced write costs, AWS JS SDK v3, keep alive connecitons, and other features",
+  "description": "express-session library for DynamoDB with configurable `touch` write reductions and configurable eventually consistent reads for higher reliability/throughput and lower costs",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "author": "PwrDrvr LLC",
@@ -21,14 +21,14 @@
     "connect-dynamodb"
   ],
   "bugs": {
-    "url": "https://github.com/pwrdrvr/connect-dynamodb-v3/issues"
+    "url": "https://github.com/pwrdrvr/dynamodb-session-store/issues"
   },
-  "homepage": "https://github.com/pwrdrvr/connect-dynamodb-v3#readme",
+  "homepage": "https://github.com/pwrdrvr/dynamodb-session-store#readme",
   "private": true,
   "scripts": {
     "build": "tsc --build tsconfig.json && echo 'examples/\n*.tsbuildinfo\n*.spec.*' > dist/.npmignore",
     "build:docs": "typedoc src/index.ts",
-    "example:express": "TABLE_NAME=${TABLE_NAME:-connect-dynamodb-v3-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/express.ts",
+    "example:express": "TABLE_NAME=${TABLE_NAME:-dynamodb-session-store-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/express.ts",
     "example:other": "TABLE_NAME=${TABLE_NAME:-connect-dynamodb-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/other.ts",
     "lint": "eslint ./ --ext .ts --ext .tsx",
     "lint-and-fix": "eslint ./ --ext .ts --ext .tsx --fix",
@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pwrdrvr/connect-dynamodb-v3.git"
+    "url": "git+https://github.com/pwrdrvr/dynamodb-session-store.git"
   },
   "engineStrict": true,
   "engine": {
