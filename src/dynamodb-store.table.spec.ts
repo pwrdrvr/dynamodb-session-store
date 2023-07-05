@@ -65,6 +65,37 @@ describe('dynamodb-store - table via jest-dynalite', () => {
       );
     });
 
+    it('destroy record', (done) => {
+      const store = new DynamoDBStore({
+        dynamoDBClient: dynamoClient,
+        tableName,
+      });
+
+      store.set(
+        '456',
+        {
+          user: 'test',
+          // @ts-expect-error something
+          cookie: {},
+        },
+        (err) => {
+          expect(err).toBeNull();
+
+          store.destroy('456', (err) => {
+            expect(err).toBeNull();
+
+            store.get('456', (err, session) => {
+              expect(err).toBeNull();
+
+              // There should be no record returned
+              expect(session).toBeNull();
+              done();
+            });
+          });
+        },
+      );
+    });
+
     it('record found, expired', (done) => {
       const store = new DynamoDBStore({
         dynamoDBClient: dynamoClient,
