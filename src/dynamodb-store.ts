@@ -188,6 +188,9 @@ export class DynamoDBStore extends session.Store {
   private _createTableOptions?: Partial<CreateTableCommandInput>;
 
   private _tableName: string;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.tableName }
+   */
   public get tableName(): string {
     return this._tableName;
   }
@@ -201,6 +204,9 @@ export class DynamoDBStore extends session.Store {
   }
 
   private _useStronglyConsistentReads: boolean;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.useStronglyConsistentReads }
+   */
   public get useStronglyConsistentReads(): boolean {
     return this._useStronglyConsistentReads;
   }
@@ -209,16 +215,25 @@ export class DynamoDBStore extends session.Store {
   }
 
   private _ttl: number;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.ttl }
+   */
   public get ttl(): number {
     return this._ttl;
   }
 
   private _hashKey: string;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.hashKey }
+   */
   public get hashKey(): string {
     return this._hashKey;
   }
 
   private _prefix: string;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.prefix }
+   */
   public get prefix(): string {
     return this._prefix;
   }
@@ -230,7 +245,7 @@ export class DynamoDBStore extends session.Store {
    * @remarks
    * This is not recommended for production use.
    *
-   * For production the table shouljd be created with IaaC (infrastructure as code)
+   * For production the table should be created with IaaC (infrastructure as code)
    * such as AWS CDK, SAM, CloudFormation, Terraform, etc.
    */
   private async createTableIfNotExists() {
@@ -340,6 +355,7 @@ export class DynamoDBStore extends session.Store {
       createTableOptions,
       hashKey = 'id',
       useStronglyConsistentReads = false,
+      prefix = 'session#',
     } = options;
 
     let touchAfterDefault = 3600;
@@ -348,7 +364,7 @@ export class DynamoDBStore extends session.Store {
       debug('reducing touchAfter default to %d seconds', touchAfterDefault);
     }
 
-    this._prefix = options.prefix ?? 'session#';
+    this._prefix = prefix;
     this._dynamoDBClient = dynamoDBClient;
     this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient, {
       marshallOptions: { removeUndefinedValues: true, convertClassInstanceToMap: true },
