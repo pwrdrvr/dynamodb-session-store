@@ -20,20 +20,24 @@ app.use(
     secret: 'yeah-dont-use-this',
     cookie: {
       maxAge: 60 * 60 * 1000, // one hour in milliseconds
-      sameSite: 'none',
-      secure: true,
+      // sameSite: 'none',
+      // If you set this to `true` then http://localhost will not work
+      // there will be no Set-Cookie response header
+      // secure: true,
     },
     // We implement `touch` to update the TTL on the session store
     // We do not want unmodified sessions to be saved as that will cause a
     // potentially massive cost issue on DynamoDB
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
   }),
 );
 
 // Add a fake login route that will set a session cookie
 app.get('/login', (req, res) => {
   console.log(`Session ID: ${req.session?.id}`);
+  // @ts-expect-error yeah
+  req.session.user = 'test';
   res.send('Logged in');
 });
 

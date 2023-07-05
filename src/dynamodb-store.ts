@@ -404,7 +404,8 @@ export class DynamoDBStore extends session.Store {
         }
 
         // If session expired, return null
-        if (Item.expires && Item.expires < Date.now()) {
+        // Note: DynamoDB uses seconds since epoch for the TTL field value
+        if (Item.expires && Item.expires * 1000 < Date.now()) {
           return callback(null, null);
         }
 
