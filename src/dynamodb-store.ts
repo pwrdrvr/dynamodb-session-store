@@ -337,7 +337,9 @@ export class DynamoDBStore extends session.Store {
 
     this._prefix = options.prefix ?? 'session#';
     this._dynamoDBClient = dynamoDBClient;
-    this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient);
+    this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient, {
+      marshallOptions: { removeUndefinedValues: true, convertClassInstanceToMap: true },
+    });
     this._tableName = tableName;
     this._ttl = ttl;
     this._touchAfter = touchAfter ?? touchAfterDefault;
