@@ -2,6 +2,8 @@
 
 There are a variety of ways to set this up, such as through the AWS Console, the AWS CLI, SAM, CDK, etc.  For the purposes of demonstrating that the session renewal works automatically, we will use the AWS CLI.
 
+[Example Source Code](./cross-account.ts)
+
 ## Setup in the Account that Owns the Table
 
 Change `ACCOUNT_USAGE` to the account number that will be using the table.
