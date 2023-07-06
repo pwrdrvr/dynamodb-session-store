@@ -111,10 +111,12 @@ describe('dynamodb-store - table via jest-dynalite', () => {
       store.set(
         '301',
         {
-          user: 'test',
           // @ts-expect-error something
+          user: 'test',
           cookie: {
             expires: new Date(),
+            maxAge: 0,
+            originalMaxAge: 60 * 60 * 1000, // one hour in milliseconds
           },
         },
         (err) => {
@@ -143,8 +145,11 @@ describe('dynamodb-store - table via jest-dynalite', () => {
       store.set(
         '123',
         {
-          // @ts-expect-error something
           user: 'test',
+          // @ts-expect-error something
+          cookie: {
+            maxAge: 60 * 60 * 1000, // one hour in milliseconds
+          },
         },
         (err) => {
           expect(err).toBeNull();

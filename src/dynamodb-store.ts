@@ -32,24 +32,6 @@ export interface DynamoDBStoreOptions {
   readonly tableName?: string;
 
   /**
-   * Time to live for sessions in seconds.
-   *
-   * @remarks
-   *
-   * The IaaC (infrastructure as code) that creates the DynamoDB table
-   * should set the TimeToLive configuration for the Table to use the field
-   * `expires`.
-   *
-   * The DynamoDB built-in mechanism for TTL is the only way that records
-   * will ever be automatically aged out.  However, expired records
-   * read from the DB (even if TTL is not enabled on the Table) will not
-   * be returned to the caller.
-   *
-   * @defaultValue 1209600 (2 weeks)
-   */
-  readonly ttl?: number;
-
-  /**
    * Only update the session TTL on `touch` events if `touchAfter` seconds has passed
    * since the last time the session TTL was updated.
    *
@@ -214,14 +196,6 @@ export class DynamoDBStore extends session.Store {
     this._useStronglyConsistentReads = value;
   }
 
-  private _ttl: number;
-  /**
-   * { @inheritDoc DynamoDBStoreOptions.ttl }
-   */
-  public get ttl(): number {
-    return this._ttl;
-  }
-
   private _hashKey: string;
   /**
    * { @inheritDoc DynamoDBStoreOptions.hashKey }
@@ -350,19 +324,12 @@ export class DynamoDBStore extends session.Store {
     const {
       dynamoDBClient = new DynamoDBClient({}),
       tableName = 'sessions',
-      ttl = 1209600, // 2 weeks in seconds
-      touchAfter,
       createTableOptions,
       hashKey = 'id',
       useStronglyConsistentReads = false,
       prefix = 'session#',
+      touchAfter = 3600,
     } = options;
-
-    let touchAfterDefault = 3600;
-    if (touchAfter === undefined && ttl < touchAfterDefault * 10) {
-      touchAfterDefault = Math.floor(ttl * 0.1);
-      debug('reducing touchAfter default to %d seconds', touchAfterDefault);
-    }
 
     this._prefix = prefix;
     this._dynamoDBClient = dynamoDBClient;
@@ -370,8 +337,7 @@ export class DynamoDBStore extends session.Store {
       marshallOptions: { removeUndefinedValues: true, convertClassInstanceToMap: true },
     });
     this._tableName = tableName;
-    this._ttl = ttl;
-    this._touchAfter = touchAfter ?? touchAfterDefault;
+    this._touchAfter = touchAfter;
     this._createTableOptions = createTableOptions;
     this._hashKey = hashKey;
     this._useStronglyConsistentReads = useStronglyConsistentReads;
@@ -489,9 +455,7 @@ export class DynamoDBStore extends session.Store {
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
             // Note: DynamoDB uses seconds since epoch for the expires field
-            ...(this.ttl
-              ? { expires: Math.floor(new Date(Date.now() + this.ttl * 1000).getTime() / 1000) }
-              : {}),
+            expires: this.newExpireSecondsSinceEpochUTC(session),
             // The `cookie` object is not marshalled correctly by the DynamoDBDocument client
             // so we strip the fields that we don't want and make sure the `expires` field
             // is turned into a string
@@ -541,13 +505,19 @@ export class DynamoDBStore extends session.Store {
         const currentTimeSecs = Math.floor(Date.now() / 1000);
 
         // Compute how much time has passed since this session was last touched
-        const timePassedSecs = currentTimeSecs + this._ttl - expiresTimeSecs;
+        const timePassedSecs =
+          currentTimeSecs + session.cookie.originalMaxAge / 1000 - expiresTimeSecs;
 
         // Update the TTL only if touchAfter
         // seconds have passed since the TTL was last updated
 
-        if (timePassedSecs > this._touchAfter) {
-          const newExpires = this._ttl * 1000 + currentTimeSecs;
+        const touchAfterSecsCapped =
+          this._touchAfter * 1000 > session.cookie.originalMaxAge
+            ? Math.floor(0.1 * (session.cookie.originalMaxAge / 1000))
+            : this._touchAfter;
+
+        if (timePassedSecs > touchAfterSecsCapped) {
+          const newExpires = this.newExpireSecondsSinceEpochUTC(session);
 
           await this._ddbDocClient.update({
             TableName: this._tableName,
@@ -604,5 +574,13 @@ export class DynamoDBStore extends session.Store {
         }
       }
     })();
+  }
+
+  private newExpireSecondsSinceEpochUTC(sess: session.SessionData): number {
+    const expires =
+      typeof sess.cookie.maxAge === 'number'
+        ? +new Date() + sess.cookie.maxAge
+        : +new Date() + 60 * 60 * 24 * 1000;
+    return Math.floor(expires / 1000);
   }
 }

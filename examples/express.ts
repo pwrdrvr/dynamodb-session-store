@@ -25,6 +25,7 @@ app.use(
     store: new DynamoDBStore({
       tableName: TABLE_NAME,
       dynamoDBClient,
+      touchAfter: 60 * 5, // 5 minutes in seconds
     }),
     secret: 'yeah-dont-use-this',
     cookie: {
@@ -34,6 +35,7 @@ app.use(
       // there will be no Set-Cookie response header
       // secure: true,
     },
+
     // We implement `touch` to update the TTL on the session store
     // We do not want unmodified sessions to be saved as that will cause a
     // potentially massive cost issue on DynamoDB
