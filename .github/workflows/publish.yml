@@ -45,6 +45,15 @@ jobs:
       - name: NPM registry authentication
         run: npm set //registry.npmjs.org/:_authToken ${{ secrets.NPMJSORG_PUBLISH_TOKEN }}
 
+      - name: Build the package
+        run: npm pack
+      
+      - name: Upload the package tgz as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: package
+          path: *.tgz
+
       - name: Publish with CLI to Code Artifact
         run: |
           npm publish --access public --ignore-scripts --dry-run

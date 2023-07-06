@@ -13,3 +13,5 @@ cdk.out
 coverage/
 
 docs/
+
+*.tgz
