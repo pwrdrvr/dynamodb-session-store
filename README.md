@@ -1,3 +1,5 @@
+[![npm (scoped)](https://img.shields.io/npm/v/%40pwrdrvr/dynamodb-session-store)](https://www.npmjs.com/package/@pwrdrvr/dynamodb-session-store) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT) [![API Docs](https://img.shields.io/badge/API%20Docs-View%20Here-blue)](https://pwrdrvr.github.io/dynamodb-session-store/) [![Build - CI](https://github.com/pwrdrvr/dynamodb-session-store/actions/workflows/ci.yml/badge.svg)](https://github.com/pwrdrvr/dynamodb-session-store/actions/workflows/ci.yml) [![Publish Docs](https://github.com/pwrdrvr/dynamodb-session-store/actions/workflows/docs.yml/badge.svg)](https://github.com/pwrdrvr/dynamodb-session-store/actions/workflows/docs.yml)
+
 # Overview
 
 [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html)-based session store for [express-session](https://www.npmjs.com/package/express-session), using the [AWS SDK for JS v3](https://github.com/aws/aws-sdk-js-v3), offering configurability for cost, performance, and reliability not found in other DynamoDB session stores.
