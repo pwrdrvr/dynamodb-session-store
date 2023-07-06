@@ -47,12 +47,12 @@ jobs:
 
       - name: Build the package
         run: npm pack
-      
+
       - name: Upload the package tgz as an artifact
         uses: actions/upload-artifact@v3
         with:
           name: package
-          path: *.tgz
+          path: '*.tgz'
 
       - name: Publish with CLI to Code Artifact
         run: |
