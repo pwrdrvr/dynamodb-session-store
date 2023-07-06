@@ -1,6 +1,8 @@
 # Overview
 
-Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for [express-session](https://www.npmjs.com/package/express-session), using the [AWS SDK for JS v3](https://github.com/aws/aws-sdk-js-v3).
+[DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html)-based session store for [express-session](https://www.npmjs.com/package/express-session), using the [AWS SDK for JS v3](https://github.com/aws/aws-sdk-js-v3), offering configurability for cost, performance, and reliability not found in other DynamoDB session stores.
+
+DynamoDB is an excellent choice for session stores because it is a fully managed service that is highly available, durable, and can scale automatically (to nearly unlimited levels) to meet demand. DynamoDB reads will typically return in 1-3 ms if capacity is set correctly and the caller is located in the same region as the `Table`.
 
 # Features
 
@@ -10,12 +12,55 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
   - This should only be used during PoCs, else tables will be created in any accounts that developers point at using credentials that have permissions to create tables
 - Cost reduction through reducing the TTL write on every read via `.touch()` calls from `express-session`
   - [This PR](https://github.com/expressjs/session/pull/892) for `express-session` would have made that a configurable option for every session store, but alas, it was rejected in favor of implementing the same thing 15+ times
-  - These TTL writes consumed WCUs based on the size of the entire session, not just hte `expires` field
+  - These TTL writes consumed WCUs based on the size of the entire session, not just the `expires` field
   - These writes were 10x more expensive than reads for under 1 KB session with ConsistentReads turned off
   - These writes were 40x more expensive than reads for 3-4 KB session with consistent reads turned off
     - Cost of 1 WCU is 5x that of 1 RCU
     - Eventually Consistent Read of 4 KB takes 0.5 RCU
     - Write of 1 KB takes 1 WCU, write of 4 KB takes 4 WCU
+
+# Configuration Tips
+
+- Use a Table per-region if you are deployed in multiple regions
+- Use a Table per-environment if you are deployed in multiple environments (e.g. dev/qa/prod)
+- Use a Table unique to the session store - do not try to overload other data into this Table as the scaling and expiration needs will not overlap well
+- For applications attached to a VPC (including Lambda's attached to a VPC), use a VPC Endpoint for DynamoDB to avoid the cost, latency, and additional reliability exposure of crossing NAT Gateway to reach DynamoDB
+- Use Provisioned Capacity with auto-scaling to avoid throttling and to achieve the lowest cost - On Demand seems nice but it is costly
+
+# Example of Pricing
+
+Disclaimer: perform your own pricing calculation, monitor your costs during and after initial launch, and setup cost alerts to avoid unexpected charges.
+
+[Saved AWS Pricing Calculation](https://calculator.aws/#/estimate?id=fb2f0d461ab2acd6c98a107059f75a4325918bda)
+
+## Assumptions
+ - Using Provisioned Capacity with auto-scaling
+ - Using Eventually Consistent Reads
+ - 2 KB average session size
+ - 100k RPM (requests per minute) average load
+ - 1 million new sessions per month (~0.4 new sessions / second)
+ - 8 million existing sessions
+ - 2 million session updates / expirations per month (~0.8 updates / second)
+
+## Pricing Calculation
+ - Storage
+   - 2 KB * 8 million = 16 GB of storage
+   - 16 GB * $0.25 / GB / month = $4 / month for storage
+ - Reads
+   - 100k RPM / 60 seconds = ~1,700 RPS (requests per second)
+   - 1 RCU (read capacity unit) per item * 0.5 (eventually consistent reads) = 0.5 RCU per read
+   - 1,700 RPS * 0.5 RCU per read = 850 RCUs
+   - 850 RCUs / read * 720 hours / month * $0.00013 / RCU / hour = ~$80 / month for reads
+ - Writes
+   - 0.4 new sessions / second + 0.8 updates / second = 1.2 WPS (writes per second)
+   - 1.2 WPS * 2 WCU (write capacity unit) per item = 2.4 WCUs
+   - Allocate more WCUs to handle bursts
+   - 100 WCUs * 720 hours / month * $0.00065 / WCU / hour = ~$50 / month for writes
+ - Total
+   - $4 / month for storage
+   - $80 / month for reads
+   - $50 / month for writes
+   - $134 / month total
 
 # Running Examples
 
@@ -91,5 +136,3 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
 ```
 
 <img width="1236" alt="image" src="https://github.com/pwrdrvr/connect-dynamodb-v3/assets/5617868/7815582a-c12a-49ec-83c0-323d76d441a6">
-
-

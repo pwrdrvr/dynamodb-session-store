@@ -23,8 +23,7 @@
   "bugs": {
     "url": "https://github.com/pwrdrvr/dynamodb-session-store/issues"
   },
-  "homepage": "https://github.com/pwrdrvr/dynamodb-session-store#readme",
-  "private": true,
+  "homepage": "https://pwrdrvr.github.io/dynamodb-session-store/",
   "scripts": {
     "build": "tsc --build tsconfig.json && echo 'examples/\n*.tsbuildinfo\n*.spec.*' > dist/.npmignore",
     "build:docs": "typedoc src/index.ts",
