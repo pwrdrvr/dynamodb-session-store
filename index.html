@@ -12,7 +12,8 @@
 <div class="col-content">
 <div class="tsd-page-title">
 <h2>@pwrdrvr/dynamodb-session-store</h2></div>
-<div class="tsd-panel tsd-typography"><a id="md:overview" class="tsd-anchor"></a><h1><a href="#md:overview">Overview</a></h1><p>Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for <a href="https://www.npmjs.com/package/express-session">express-session</a>, using the <a href="https://github.com/aws/aws-sdk-js-v3">AWS SDK for JS v3</a>.</p>
+<div class="tsd-panel tsd-typography"><a id="md:overview" class="tsd-anchor"></a><h1><a href="#md:overview">Overview</a></h1><p><a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html">DynamoDB</a>-based session store for <a href="https://www.npmjs.com/package/express-session">express-session</a>, using the <a href="https://github.com/aws/aws-sdk-js-v3">AWS SDK for JS v3</a>, offering configurability for cost, performance, and reliability not found in other DynamoDB session stores.</p>
+<p>DynamoDB is an excellent choice for session stores because it is a fully managed service that is highly available, durable, and can scale automatically (to nearly unlimited levels) to meet demand. DynamoDB reads will typically return in 1-3 ms if capacity is set correctly and the caller is located in the same region as the <code>Table</code>.</p>
 <a id="md:features" class="tsd-anchor"></a><h1><a href="#md:features">Features</a></h1><ul>
 <li>Configurability of <code>Strongly Consistent Reads</code><ul>
 <li>Off by default as Eventually Consistent Reads are less expensive and more reliable</li>
@@ -24,7 +25,7 @@
 </li>
 <li>Cost reduction through reducing the TTL write on every read via <code>.touch()</code> calls from <code>express-session</code><ul>
 <li><a href="https://github.com/expressjs/session/pull/892">This PR</a> for <code>express-session</code> would have made that a configurable option for every session store, but alas, it was rejected in favor of implementing the same thing 15+ times</li>
-<li>These TTL writes consumed WCUs based on the size of the entire session, not just hte <code>expires</code> field</li>
+<li>These TTL writes consumed WCUs based on the size of the entire session, not just the <code>expires</code> field</li>
 <li>These writes were 10x more expensive than reads for under 1 KB session with ConsistentReads turned off</li>
 <li>These writes were 40x more expensive than reads for 3-4 KB session with consistent reads turned off<ul>
 <li>Cost of 1 WCU is 5x that of 1 RCU</li>
@@ -32,6 +33,52 @@
 <li>Write of 1 KB takes 1 WCU, write of 4 KB takes 4 WCU</li>
 </ul>
 </li>
+</ul>
+</li>
+</ul>
+<a id="md:configuration-tips" class="tsd-anchor"></a><h1><a href="#md:configuration-tips">Configuration Tips</a></h1><ul>
+<li>Use a Table per-region if you are deployed in multiple regions</li>
+<li>Use a Table per-environment if you are deployed in multiple environments (e.g. dev/qa/prod)</li>
+<li>Use a Table unique to the session store - do not try to overload other data into this Table as the scaling and expiration needs will not overlap well</li>
+<li>For applications attached to a VPC (including Lambda&#39;s attached to a VPC), use a VPC Endpoint for DynamoDB to avoid the cost, latency, and additional reliability exposure of crossing NAT Gateway to reach DynamoDB</li>
+<li>Use Provisioned Capacity with auto-scaling to avoid throttling and to achieve the lowest cost - On Demand seems nice but it is costly</li>
+</ul>
+<a id="md:example-of-pricing" class="tsd-anchor"></a><h1><a href="#md:example-of-pricing">Example of Pricing</a></h1><p>Disclaimer: perform your own pricing calculation, monitor your costs during and after initial launch, and setup cost alerts to avoid unexpected charges.</p>
+<p><a href="https://calculator.aws/#/estimate?id=fb2f0d461ab2acd6c98a107059f75a4325918bda">Saved AWS Pricing Calculation</a></p>
+<a id="md:assumptions" class="tsd-anchor"></a><h2><a href="#md:assumptions">Assumptions</a></h2><ul>
+<li>Using Provisioned Capacity with auto-scaling</li>
+<li>Using Eventually Consistent Reads</li>
+<li>2 KB average session size</li>
+<li>100k RPM (requests per minute) average load</li>
+<li>1 million new sessions per month (~0.4 new sessions / second)</li>
+<li>8 million existing sessions</li>
+<li>2 million session updates / expirations per month (~0.8 updates / second)</li>
+</ul>
+<a id="md:pricing-calculation" class="tsd-anchor"></a><h2><a href="#md:pricing-calculation">Pricing Calculation</a></h2><ul>
+<li>Storage<ul>
+<li>2 KB * 8 million = 16 GB of storage</li>
+<li>16 GB * $0.25 / GB / month = $4 / month for storage</li>
+</ul>
+</li>
+<li>Reads<ul>
+<li>100k RPM / 60 seconds = ~1,700 RPS (requests per second)</li>
+<li>1 RCU (read capacity unit) per item * 0.5 (eventually consistent reads) = 0.5 RCU per read</li>
+<li>1,700 RPS * 0.5 RCU per read = 850 RCUs</li>
+<li>850 RCUs / read * 720 hours / month * $0.00013 / RCU / hour = ~$80 / month for reads</li>
+</ul>
+</li>
+<li>Writes<ul>
+<li>0.4 new sessions / second + 0.8 updates / second = 1.2 WPS (writes per second)</li>
+<li>1.2 WPS * 2 WCU (write capacity unit) per item = 2.4 WCUs</li>
+<li>Allocate more WCUs to handle bursts</li>
+<li>100 WCUs * 720 hours / month * $0.00065 / WCU / hour = ~$50 / month for writes</li>
+</ul>
+</li>
+<li>Total<ul>
+<li>$4 / month for storage</li>
+<li>$80 / month for reads</li>
+<li>$50 / month for writes</li>
+<li>$134 / month total</li>
 </ul>
 </li>
 </ul>
@@ -113,6 +160,12 @@
 <ul>
 <li><a href="#md:overview"><span>Overview</span></a></li>
 <li><a href="#md:features"><span>Features</span></a></li>
+<li><a href="#md:configuration-tips"><span>Configuration <wbr/>Tips</span></a></li>
+<li><a href="#md:example-of-pricing"><span>Example of <wbr/>Pricing</span></a></li>
+<li>
+<ul>
+<li><a href="#md:assumptions"><span>Assumptions</span></a></li>
+<li><a href="#md:pricing-calculation"><span>Pricing <wbr/>Calculation</span></a></li></ul></li>
 <li><a href="#md:running-examples"><span>Running <wbr/>Examples</span></a></li>
 <li>
 <ul>
