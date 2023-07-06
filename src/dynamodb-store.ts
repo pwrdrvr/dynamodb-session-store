@@ -32,21 +32,6 @@ export interface DynamoDBStoreOptions {
   readonly tableName?: string;
 
   /**
-   * Time to live for sessions in seconds.
-   *
-   * The IaaC (infrastructure as code) that creates the DynamoDB table
-   * should set the TimeToLive configuration for the Table to use the field
-   * `expires`.
-   *
-   * The DynamoDB built-in mechanism for TTL is the only way that records
-   * will ever be automatically aged out.  Scanning and deleting is
-   * incredibly expensive and inefficient and is not provided as an option.
-   *
-   * @defaultValue 1209600 (2 weeks)
-   */
-  readonly ttl?: number;
-
-  /**
    * Only update the session TTL on `touch` events if `touchAfter` seconds has passed
    * since the last time the session TTL was updated.
    *
@@ -185,6 +170,9 @@ export class DynamoDBStore extends session.Store {
   private _createTableOptions?: Partial<CreateTableCommandInput>;
 
   private _tableName: string;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.tableName }
+   */
   public get tableName(): string {
     return this._tableName;
   }
@@ -198,6 +186,9 @@ export class DynamoDBStore extends session.Store {
   }
 
   private _useStronglyConsistentReads: boolean;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.useStronglyConsistentReads }
+   */
   public get useStronglyConsistentReads(): boolean {
     return this._useStronglyConsistentReads;
   }
@@ -205,17 +196,18 @@ export class DynamoDBStore extends session.Store {
     this._useStronglyConsistentReads = value;
   }
 
-  private _ttl: number;
-  public get ttl(): number {
-    return this._ttl;
-  }
-
   private _hashKey: string;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.hashKey }
+   */
   public get hashKey(): string {
     return this._hashKey;
   }
 
   private _prefix: string;
+  /**
+   * { @inheritDoc DynamoDBStoreOptions.prefix }
+   */
   public get prefix(): string {
     return this._prefix;
   }
@@ -227,7 +219,7 @@ export class DynamoDBStore extends session.Store {
    * @remarks
    * This is not recommended for production use.
    *
-   * For production the table shouljd be created with IaaC (infrastructure as code)
+   * For production the table should be created with IaaC (infrastructure as code)
    * such as AWS CDK, SAM, CloudFormation, Terraform, etc.
    */
   private async createTableIfNotExists() {
@@ -332,27 +324,20 @@ export class DynamoDBStore extends session.Store {
     const {
       dynamoDBClient = new DynamoDBClient({}),
       tableName = 'sessions',
-      ttl = 1209600, // 2 weeks in seconds
-      touchAfter,
       createTableOptions,
       hashKey = 'id',
       useStronglyConsistentReads = false,
+      prefix = 'session#',
+      touchAfter = 3600,
     } = options;
 
-    let touchAfterDefault = 3600;
-    if (touchAfter === undefined && ttl < touchAfterDefault * 10) {
-      touchAfterDefault = Math.floor(ttl * 0.1);
-      debug('reducing touchAfter default to %d seconds', touchAfterDefault);
-    }
-
-    this._prefix = options.prefix ?? 'session#';
+    this._prefix = prefix;
     this._dynamoDBClient = dynamoDBClient;
     this._ddbDocClient = DynamoDBDocument.from(dynamoDBClient, {
       marshallOptions: { removeUndefinedValues: true, convertClassInstanceToMap: true },
     });
     this._tableName = tableName;
-    this._ttl = ttl;
-    this._touchAfter = touchAfter ?? touchAfterDefault;
+    this._touchAfter = touchAfter;
     this._createTableOptions = createTableOptions;
     this._hashKey = hashKey;
     this._useStronglyConsistentReads = useStronglyConsistentReads;
@@ -470,9 +455,7 @@ export class DynamoDBStore extends session.Store {
           Item: {
             [this._hashKey]: `${this._prefix}${sid}`,
             // Note: DynamoDB uses seconds since epoch for the expires field
-            expires: session.cookie?.expires
-              ? Math.floor(session.cookie.expires.getTime() / 1000)
-              : 0,
+            expires: this.newExpireSecondsSinceEpochUTC(session),
             // The `cookie` object is not marshalled correctly by the DynamoDBDocument client
             // so we strip the fields that we don't want and make sure the `expires` field
             // is turned into a string
@@ -517,22 +500,24 @@ export class DynamoDBStore extends session.Store {
   ): void {
     void (async () => {
       try {
-        const expiresTimeSecs = session.cookie.expires
-          ? Math.floor(session.cookie.expires.getTime() / 1000)
-          : 0;
+        // @ts-expect-error expires may exist
+        const expiresTimeSecs = session.expires ? session.expires : 0;
         const currentTimeSecs = Math.floor(Date.now() / 1000);
 
         // Compute how much time has passed since this session was last touched
-        const timePassedSecs = currentTimeSecs + this._ttl - expiresTimeSecs;
+        const timePassedSecs =
+          currentTimeSecs + session.cookie.originalMaxAge / 1000 - expiresTimeSecs;
 
         // Update the TTL only if touchAfter
         // seconds have passed since the TTL was last updated
 
-        if (timePassedSecs > this._touchAfter) {
-          const newExpires =
-            typeof session.cookie.maxAge === 'number'
-              ? currentTimeSecs + session.cookie.maxAge
-              : this._ttl * 1000 + currentTimeSecs;
+        const touchAfterSecsCapped =
+          this._touchAfter * 1000 > session.cookie.originalMaxAge
+            ? Math.floor(0.1 * (session.cookie.originalMaxAge / 1000))
+            : this._touchAfter;
+
+        if (timePassedSecs > touchAfterSecsCapped) {
+          const newExpires = this.newExpireSecondsSinceEpochUTC(session);
 
           await this._ddbDocClient.update({
             TableName: this._tableName,
@@ -589,5 +574,13 @@ export class DynamoDBStore extends session.Store {
         }
       }
     })();
+  }
+
+  private newExpireSecondsSinceEpochUTC(sess: session.SessionData): number {
+    const expires =
+      typeof sess.cookie.maxAge === 'number'
+        ? +new Date() + sess.cookie.maxAge
+        : +new Date() + 60 * 60 * 24 * 1000;
+    return Math.floor(expires / 1000);
   }
 }

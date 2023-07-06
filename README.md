@@ -31,6 +31,8 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
       1. `aws dynamodb update-time-to-live --table-name dynamodb-session-store-test --time-to-live-specification "Enabled=true, AttributeName=expires"`
 2. `npm run example:express`
    1. If the table name was changed: `TABLE_NAME=my-table-name npm run example:express`
+3. Load `http://localhost:3001/login` in a browser
+4. Observe that a cookie is returned and does not change
 
 ## [express with dynamodb-connect module - for comparison](./examples/other)
 
@@ -44,6 +46,8 @@ Partial, as of 2022-05-25, implementation of a DynamoDB-based session store for 
       1. `aws dynamodb update-time-to-live --table-name connect-dynamodb-test --time-to-live-specification "Enabled=true, AttributeName=expires"`
 2. `npm run example:express`
    1. If the table name was changed: `TABLE_NAME=my-table-name npm run example:other`
+3. Load `http://localhost:3001/login` in a browser
+4. Observe that a cookie is returned and does not change
 
 # Comparison with [dynamodb-connect](https://www.npmjs.com/package/dynamodb-connect)
 

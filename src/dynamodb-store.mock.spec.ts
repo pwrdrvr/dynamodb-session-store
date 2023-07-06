@@ -334,12 +334,13 @@ describe('mock AWS API', () => {
         store.touch(
           '123',
           {
-            user: 'test',
             // @ts-expect-error we know we have a cookie field
+            user: 'test',
             cookie: {
+              maxAge: 1000 * (14 * 24 - 4) * 60 * 60,
+              originalMaxAge: 1000 * (14 * 24) * 60 * 60,
               expires: new Date(Date.now() + 1000 * (14 * 24 - 4) * 60 * 60),
             },
-            expires: Date.now() + 1000 * (14 * 24 - 4) * 60 * 60,
           },
           (err) => {
             expect(err).toBeNull();
