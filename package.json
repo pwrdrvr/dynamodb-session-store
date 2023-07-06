@@ -27,6 +27,7 @@
   "scripts": {
     "build": "tsc --build tsconfig.json && echo 'examples/\n*.tsbuildinfo\n*.spec.*' > dist/.npmignore",
     "build:docs": "typedoc src/index.ts",
+    "example:cross-account": "TABLE_ARN=${TABLE_ARN:-dynamodb-session-store-test} TABLE_ROLE_ARN=${TABLE_ROLE_ARN:-you-will-have-to-set-this} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/cross-account.ts",
     "example:express": "TABLE_NAME=${TABLE_NAME:-dynamodb-session-store-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/express.ts",
     "example:other": "TABLE_NAME=${TABLE_NAME:-connect-dynamodb-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/other.ts",
     "lint": "eslint ./ --ext .ts --ext .tsx",
@@ -53,7 +54,7 @@
     "debug": "^4.3.4"
   },
   "devDependencies": {
-    "@aws-sdk/client-kinesis": "3.353.0",
+    "@aws-sdk/credential-providers": "^3.20.0",
     "@types/debug": "^4.1.7",
     "@types/express-session": "1.17.4",
     "@types/jest": "29.5.2",
