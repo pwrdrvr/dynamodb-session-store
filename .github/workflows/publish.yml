@@ -31,7 +31,6 @@ jobs:
 
       - name: Use the Release Tag Version
         run: |
-          npm version from-git --allow-same-version --no-git-tag-version --workspaces
           npm version from-git --allow-same-version --no-git-tag-version
 
       - name: Build
