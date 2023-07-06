@@ -42,9 +42,6 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: NPM registry authentication
-        run: npm set //registry.npmjs.org/:_authToken ${{ secrets.NPMJSORG_PUBLISH_TOKEN }}
-
       - name: Build the package
         run: npm pack
 
@@ -54,6 +51,9 @@ jobs:
           name: package
           path: '*.tgz'
 
-      - name: Publish with CLI to Code Artifact
+      - name: NPM registry authentication
+        run: npm set //registry.npmjs.org/:_authToken ${{ secrets.NPMJSORG_PUBLISH_TOKEN }}
+
+      - name: Publish the package
         run: |
-          npm publish --access public --ignore-scripts --dry-run
+          npm publish --access public --ignore-scripts
