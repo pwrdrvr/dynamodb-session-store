@@ -89,6 +89,8 @@ This example is more involved than the others as it requires setting up an IAM r
 
 [Instructions for Cross-Account DynamoDB Table Example](./examples/CROSS-ACCOUNT.md)
 
+![Session Store with DynamoDB Table in Another Account](https://github.com/pwrdrvr/dynamodb-session-store/assets/5617868/dbc8d07b-b2f3-42c8-96c9-2476007ed24c)
+
 ## [express with dynamodb-connect module - for comparison](./examples/other)
 
 1. Create DynamoDB Table using AWS Console or any other method
