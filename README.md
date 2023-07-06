@@ -81,6 +81,16 @@ Disclaimer: perform your own pricing calculation, monitor your costs during and 
 3. Load `http://localhost:3001/login` in a browser
 4. Observe that a cookie is returned and does not change
 
+## [cross-account](./examples/cross-account)
+
+This example has the DynamoDB in one account and the express app using an IAM role from another account to access the DynamoDB Table using temporary credentials from an STS AssumeRole call (neatly encapsulated by the AWS SDK for JS v3).
+
+This example is more involved than the others as it requires setting up an IAM role that can be assumed by the app account.
+
+[Instructions for Cross-Account DynamoDB Table Example](./examples/CROSS-ACCOUNT.md)
+
+![Session Store with DynamoDB Table in Another Account](https://github.com/pwrdrvr/dynamodb-session-store/assets/5617868/dbc8d07b-b2f3-42c8-96c9-2476007ed24c)
+
 ## [express with dynamodb-connect module - for comparison](./examples/other)
 
 1. Create DynamoDB Table using AWS Console or any other method
