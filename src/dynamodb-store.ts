@@ -80,9 +80,11 @@ export interface DynamoDBStoreOptions {
   /**
    * Create the DynamoDB table if it does not exist with OnDemand capacity
    *
-   * NOT SUGGESTED: this can create the table in many accounts and regions
+   * @remarks
+   *
+   * ⛔️ NOT SUGGESTED ⛔️: this can create the table in many accounts and regions
    * for any developer running the app locally with AWS credentials that
-   * have permission to create tables.  This is also a bad idea
+   * have permission to create tables. This is also a bad idea
    * because the least expensive option for relatively stable loads
    * is to use ProvisionedCapacity with Application Auto Scaling
    * configured to adjust the Read and Write capacity.
@@ -95,6 +97,9 @@ export interface DynamoDBStoreOptions {
   readonly createTableOptions?: Partial<CreateTableCommandInput>;
 
   /**
+   * Use Strongly Consistent Reads for session reads
+   *
+   * @remarks
    * Strongly Consistent Reads should rarely be needed for a session store unless
    * the values in the session are updated frequently and they must absolutely
    * be the most recent version (which is very unliley as the most recent
@@ -217,7 +222,7 @@ export class DynamoDBStore extends session.Store {
    * Enable TTL field on the table if configured
    *
    * @remarks
-   * This is not recommended for production use.
+   * ⛔️ NOT SUGGESTED ⛔️: This is not recommended for production use.
    *
    * For production the table should be created with IaaC (infrastructure as code)
    * such as AWS CDK, SAM, CloudFormation, Terraform, etc.
@@ -308,15 +313,14 @@ export class DynamoDBStore extends session.Store {
   }
 
   /**
-   * Create a DynamoDB Table-based express-session store.
-   *
-   * Note: This does not await creation of a table (which should only
-   * be used in quick and dirty tests).
-   *
-   * @param options DynamoDBStore options
+   * Create a DynamoDB Table-based [express-session](https://www.npmjs.com/package/express-session) store.
    *
    * @remarks
-   * `createTableOptions` is not recommended for production use.
+   * ⛔️ NOT SUGGESTED ⛔️: `createTableOptions` is not recommended for production use.
+   *
+   * Note: This does not await creation of a table if `createTableOptions` is passed (which should only
+   * be used in quick and dirty tests).  Use `DynamoDBStore.create()` instead to await
+   * creation of the table in testing scenarios.
    */
   constructor(options: DynamoDBStoreOptions) {
     super();
