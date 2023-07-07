@@ -90,7 +90,7 @@ app.listen(Number.parseInt(PORT, 10), () => {
 
 ## API Documentation
 
-After installing the package, you might want to look at the [API Documentation](https://pwrdrvr.github.io/dynamodb-session-store/classes/DynamoDBStore.html) to learn about all the features available.
+After installing the package review the [API Documentation](https://pwrdrvr.github.io/dynamodb-session-store/classes/DynamoDBStore.html) for detailed on each configuration option.
 
 # Features
 
@@ -109,8 +109,8 @@ After installing the package, you might want to look at the [API Documentation](
 
 # Configuration Tips
 
-- Use a Table per-region if you are deployed in multiple regions
-- Use a Table per-environment if you are deployed in multiple environments (e.g. dev/qa/prod)
+- Use a Table per-region if the app is deployed in multiple regions
+- Use a Table per-environment if the app is deployed in multiple environments (e.g. dev/qa/prod)
 - Use a Table unique to the session store - do not try to overload other data into this Table as the scaling and expiration needs will not overlap well
 - For applications attached to a VPC (including Lambda's attached to a VPC), use a VPC Endpoint for DynamoDB to avoid the cost, latency, and additional reliability exposure of crossing NAT Gateway to reach DynamoDB
 - Use Provisioned Capacity with auto-scaling to avoid throttling and to achieve the lowest cost - On Demand seems nice but it is costly
