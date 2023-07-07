@@ -6,6 +6,92 @@
 
 DynamoDB is an excellent choice for session stores because it is a fully managed service that is highly available, durable, and can scale automatically (to nearly unlimited levels) to meet demand. DynamoDB reads will typically return in 1-3 ms if capacity is set correctly and the caller is located in the same region as the `Table`.
 
+# Getting Started
+
+## Installation
+
+The package is available on npm as [@pwrdrvr/dynamodb-session-store](https://www.npmjs.com/package/@pwrdrvr/dynamodb-session-store)
+
+`npm i @pwrdrvr/dynamodb-session-store`
+
+## Importing
+
+```typescript
+import { DynamoDBStore } from '@pwrdrvr/dynamodb-session-store';
+```
+
+## Necessary IAM Policy
+
+The following IAM permissions are required for the DynamoDB Table:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowDynamoDBAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:123456789012:table/dynamodb-session-store-test"
+    }
+  ]
+}
+```
+
+## Example Usage
+
+[See the examples directory for more examples](./examples)
+
+```typescript
+import express from 'express';
+import session from 'express-session';
+import { DynamoDBStore } from '@pwrdrvr/dynamodb-session-store';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+
+const app = express();
+const dynamoDBClient = new DynamoDBClient({});
+
+app.use(
+  session({
+    store: new DynamoDBStore({
+      tableName: 'some-table',
+      dynamoDBClient,
+      touchAfter: 60 * 60, // 60 minutes in seconds
+    }),
+    secret: 'yeah-change-this',
+    cookie: {
+      maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days in milliseconds
+    },
+    resave: false,
+    saveUninitialized: false,
+  }),
+);
+
+app.get('/login', (req, res) => {
+  console.log(`Session ID: ${req.session?.id}`);
+  req.session.user = 'test';
+  res.send('Logged in');
+});
+
+app.get('/*', (req, res) => {
+  res.status(200).send('Hello world');
+});
+
+app.listen(Number.parseInt(PORT, 10), () => {
+  console.log(`Example app listening on port ${port}`);
+});
+```
+
+## API Documentation
+
+After installing the package review the [API Documentation](https://pwrdrvr.github.io/dynamodb-session-store/classes/DynamoDBStore.html) for detailed on each configuration option.
+
 # Features
 
 - Configurability of `Strongly Consistent Reads`
@@ -23,8 +109,8 @@ DynamoDB is an excellent choice for session stores because it is a fully managed
 
 # Configuration Tips
 
-- Use a Table per-region if you are deployed in multiple regions
-- Use a Table per-environment if you are deployed in multiple environments (e.g. dev/qa/prod)
+- Use a Table per-region if the app is deployed in multiple regions
+- Use a Table per-environment if the app is deployed in multiple environments (e.g. dev/qa/prod)
 - Use a Table unique to the session store - do not try to overload other data into this Table as the scaling and expiration needs will not overlap well
 - For applications attached to a VPC (including Lambda's attached to a VPC), use a VPC Endpoint for DynamoDB to avoid the cost, latency, and additional reliability exposure of crossing NAT Gateway to reach DynamoDB
 - Use Provisioned Capacity with auto-scaling to avoid throttling and to achieve the lowest cost - On Demand seems nice but it is costly
