@@ -88,6 +88,23 @@ app.listen(Number.parseInt(PORT, 10), () => {
 });
 ```
 
+## Supported Field Types
+
+The following field types are fully supported by the `DynamoDBStore`:
+
+- `string`
+- `number`
+- `boolean`
+- `object`
+
+The following field types are partially supported by the `DynamoDBStore`:
+
+- `Date`
+  - Stored as a string in ISO 8601 format
+  - Will be returend as a string in ISO 8601 format
+  - Cannot be automatically converted back into a `Date` object since it is not known which fields were originally `Date` objects vs date strings
+  - Note: [connect-dynamodb](https://www.npmjs.com/package/connect-dynamodb) serializes `Date` objects to strings as well and also does not support automatic conversion back to `Date` objects since it serializes using `JSON.stringify()` and `JSON.parse()`
+
 ## API Documentation
 
 After installing the package review the [API Documentation](https://pwrdrvr.github.io/dynamodb-session-store/classes/DynamoDBStore.html) for detailed on each configuration option.

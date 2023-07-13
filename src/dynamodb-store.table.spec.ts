@@ -203,5 +203,158 @@ describe('dynamodb-store - table via jest-dynalite', () => {
         },
       );
     });
+
+    it('can serialize Date objects to strings', (done) => {
+      const store = new DynamoDBStore({
+        dynamoDBClient: dynamoClient,
+        tableName,
+      });
+
+      store.set(
+        '129',
+        {
+          mySessionInfo: {
+            // Use a static date to ensure the same value is stored and retrieved
+            dateField: new Date('2021-07-01T01:02:03Z'),
+          },
+          // @ts-expect-error something
+          cookie: {
+            maxAge: 60 * 60 * 1000, // one hour in milliseconds
+          },
+        },
+        (err) => {
+          expect(err).toBeNull();
+
+          ddbDocClient
+            .send(new GetCommand({ TableName: tableName, Key: { id: 'session#129' } }))
+            .then(({ Item }) => {
+              expect(Item).toBeDefined();
+              expect(Item!.sess).toBeDefined();
+              expect(Item!.sess.mySessionInfo).toBeDefined();
+              expect(Item!.sess.mySessionInfo.dateField).toBeDefined();
+
+              // Check that the DB has a string
+              expect(Item!.sess.mySessionInfo.dateField).toBe('2021-07-01T01:02:03.000Z');
+
+              store.get('129', (err, session) => {
+                expect(err).toBeNull();
+                expect(session).toBeDefined();
+
+                // @ts-expect-error yes mySessionInfo exists
+                const typedSession = session as {
+                  mySessionInfo: {
+                    dateField: Date;
+                  };
+                };
+
+                expect(typedSession!.mySessionInfo).toBeDefined();
+                // The date field is not going to be a date object
+                // since we do not have a schema to know which fields to
+                // convert to back into dates and which were strings
+                // to begin with
+                // expect(typedSession!.mySessionInfo.dateField).toBeInstanceOf(Date);
+                expect(typedSession!.mySessionInfo.dateField).toEqual('2021-07-01T01:02:03.000Z');
+
+                done();
+              });
+            })
+            .catch((err) => {
+              done(err);
+            });
+        },
+      );
+    });
+
+    it('can serialize / deserialize string / object / boolean / number values', (done) => {
+      const store = new DynamoDBStore({
+        dynamoDBClient: dynamoClient,
+        tableName,
+      });
+
+      store.set(
+        '129',
+        {
+          mySessionInfo: {
+            stringField: 'some string',
+            numberField: 123,
+            floatingNumberField: 123.456,
+            someBooleanField: true,
+            someOtherBooleanField: false,
+            someObjectField: {
+              nestedField: 'nested value',
+            },
+            someUndefinedField: undefined,
+            someNullField: null,
+          },
+          // @ts-expect-error something
+          cookie: {
+            maxAge: 60 * 60 * 1000, // one hour in milliseconds
+          },
+        },
+        (err) => {
+          expect(err).toBeNull();
+
+          ddbDocClient
+            .send(new GetCommand({ TableName: tableName, Key: { id: 'session#129' } }))
+            .then(({ Item }) => {
+              expect(Item).toBeDefined();
+              expect(Item!.sess).toBeDefined();
+              expect(Item!.sess.mySessionInfo).toBeDefined();
+
+              // Check that the DB record looks correct
+              expect(Item!.sess.mySessionInfo.stringField).toBe('some string');
+              expect(Item!.sess.mySessionInfo.numberField).toBe(123);
+              expect(Item!.sess.mySessionInfo.floatingNumberField).toBe(123.456);
+              expect(Item!.sess.mySessionInfo.someBooleanField).toBe(true);
+              expect(Item!.sess.mySessionInfo.someOtherBooleanField).toBe(false);
+              expect(Item!.sess.mySessionInfo.someObjectField).toBeDefined();
+              expect(Item!.sess.mySessionInfo.someObjectField.nestedField).toBe('nested value');
+              expect(Item!.sess.mySessionInfo.someUndefinedField).toBeUndefined();
+              expect(Item!.sess.mySessionInfo.someNullField).toBeNull();
+
+              store.get('129', (err, session) => {
+                expect(err).toBeNull();
+                expect(session).toBeDefined();
+
+                // @ts-expect-error yes mySessionInfo exists
+                const typedSession = session as {
+                  mySessionInfo: {
+                    stringField: string;
+                    numberField: number;
+                    floatingNumberField: number;
+                    someBooleanField: boolean;
+                    someOtherBooleanField: boolean;
+                    someObjectField: {
+                      nestedField: string;
+                    };
+                    someUndefinedField: undefined;
+                    someNullField: null;
+                  };
+                };
+
+                expect(typedSession!.mySessionInfo).toBeDefined();
+
+                // Check that the values are correct
+                expect(typedSession!.mySessionInfo.stringField).toBe('some string');
+                expect(typedSession!.mySessionInfo.numberField).toBe(123);
+                expect(typedSession!.mySessionInfo.floatingNumberField).toBe(123.456);
+                expect(typedSession!.mySessionInfo.someBooleanField).toBe(true);
+                expect(typedSession!.mySessionInfo.someOtherBooleanField).toBe(false);
+                expect(typedSession!.mySessionInfo.someObjectField).toBeDefined();
+                expect(typedSession!.mySessionInfo.someObjectField.nestedField).toBe(
+                  'nested value',
+                );
+                expect(typedSession!.mySessionInfo.someUndefinedField).toBeUndefined();
+                expect(typedSession!.mySessionInfo.someNullField).toBeNull();
+
+                done();
+              });
+            })
+            .catch((err) => {
+              done(err);
+            });
+        },
+      );
+    });
   });
 });
