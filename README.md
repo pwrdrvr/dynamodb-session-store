@@ -103,7 +103,7 @@ The following field types are partially supported by the `DynamoDBStore`:
   - Stored as a string in ISO 8601 format
   - Will be returend as a string in ISO 8601 format
   - Cannot be automatically converted back into a `Date` object since it is not known which fields were originally `Date` objects vs date strings
-  - Note: [connect-dynamodb](https://www.npmjs.com/package/connect-dynamodb) serializes `Date` objects to strings as well and also does not support automatic conversion back to `Date` objects since it serializes using `JSON.stringify()` and `JSON.parse()`
+  - Note: [connect-dynamodb](https://www.npmjs.com/package/connect-dynamodb) serializes `Date` objects to strings as well and also does not support automatic conversion back to `Date` objects since it serializes using [JSON.stringify()](https://github.com/ca98am79/connect-dynamodb/blob/87028bb10fa3c9d4b8adf4f6cdeea2c41c0e8f23/lib/connect-dynamodb.js#L203) and [JSON.parse()](https://github.com/ca98am79/connect-dynamodb/blob/87028bb10fa3c9d4b8adf4f6cdeea2c41c0e8f23/lib/connect-dynamodb.js#L185)
 
 ## API Documentation
 
