@@ -41,4 +41,17 @@ describe('deepReplaceDatesWithISOStrings', () => {
       },
     });
   });
+
+  // Check that original object is unmodified
+  it('should not modify the original object', () => {
+    const date = new Date();
+    const obj = {
+      name: 'John',
+      created: date,
+    };
+
+    deepReplaceDatesWithISOStrings(obj);
+
+    expect(obj.created).toBe(date);
+  });
 });

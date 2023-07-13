@@ -1,3 +1,6 @@
+/**
+ * Deep clones the object and replaces all Date objects with their ISO string representation.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function deepReplaceDatesWithISOStrings(obj: any): any {
   if (obj instanceof Date) {

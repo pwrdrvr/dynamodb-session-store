@@ -210,13 +210,15 @@ describe('dynamodb-store - table via jest-dynalite', () => {
         tableName,
       });
 
+      const originalSessionObject = {
+        // Use a static date to ensure the same value is stored and retrieved
+        dateField: new Date('2021-07-01T01:02:03Z'),
+      };
+
       store.set(
         '129',
         {
-          mySessionInfo: {
-            // Use a static date to ensure the same value is stored and retrieved
-            dateField: new Date('2021-07-01T01:02:03Z'),
-          },
+          mySessionInfo: originalSessionObject,
           // @ts-expect-error something
           cookie: {
             maxAge: 60 * 60 * 1000, // one hour in milliseconds
@@ -254,6 +256,9 @@ describe('dynamodb-store - table via jest-dynalite', () => {
                 // to begin with
                 // expect(typedSession!.mySessionInfo.dateField).toBeInstanceOf(Date);
                 expect(typedSession!.mySessionInfo.dateField).toEqual('2021-07-01T01:02:03.000Z');
+
+                // Confirm that the original field is still a date object
+                expect(originalSessionObject.dateField).toBeInstanceOf(Date);
 
                 done();
               });
