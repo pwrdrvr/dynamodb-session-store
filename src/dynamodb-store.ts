@@ -9,6 +9,7 @@ import {
 import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb';
 import Debug from 'debug';
 import { promisify } from 'util';
+import { deepReplaceDatesWithISOStrings } from './deep-replace-dates-with-strings';
 
 const sleep = promisify(setTimeout);
 const debug = Debug('@pwrdrvr/dynamodb-session-store');
@@ -464,7 +465,7 @@ export class DynamoDBStore extends session.Store {
             // so we strip the fields that we don't want and make sure the `expires` field
             // is turned into a string
             sess: {
-              ...session,
+              ...deepReplaceDatesWithISOStrings(session),
               ...(session.cookie
                 ? { cookie: { ...JSON.parse(JSON.stringify(session.cookie)) } }
                 : {}),
