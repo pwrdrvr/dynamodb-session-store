@@ -469,6 +469,8 @@ export class DynamoDBStore extends session.Store {
               ...(session.cookie
                 ? { cookie: { ...JSON.parse(JSON.stringify(session.cookie)) } }
                 : {}),
+              // Add last-modified if touchAfter is set
+              ...(this.touchAfter > 0 ? { lastModified: new Date().toISOString() } : {}),
             },
           },
         });
@@ -497,7 +499,7 @@ export class DynamoDBStore extends session.Store {
     /**
      * Session data
      */
-    session: session.SessionData,
+    session: session.SessionData & { lastModified?: string },
     /**
      * Callback to return an error if the session TTL was not updated
      */
@@ -505,13 +507,13 @@ export class DynamoDBStore extends session.Store {
   ): void {
     void (async () => {
       try {
-        // @ts-expect-error expires may exist
-        const expiresTimeSecs = session.expires ? session.expires : 0;
+        // The `expires` field from the DB `Item` is not available here
+        // when a session is loaded from the store
+        // We have to use a `lastModified` field within the user-visible session
         const currentTimeSecs = Math.floor(Date.now() / 1000);
-
-        // Compute how much time has passed since this session was last touched
-        const timePassedSecs =
-          currentTimeSecs + session.cookie.originalMaxAge / 1000 - expiresTimeSecs;
+        const lastModifiedSecs = session.lastModified
+          ? Math.floor(new Date(session.lastModified).getTime() / 1000)
+          : 0;
 
         // Update the TTL only if touchAfter
         // seconds have passed since the TTL was last updated
@@ -521,21 +523,33 @@ export class DynamoDBStore extends session.Store {
             ? Math.floor(0.1 * (session.cookie.originalMaxAge / 1000))
             : this._touchAfter;
 
-        if (timePassedSecs > touchAfterSecsCapped) {
-          const newExpires = this.newExpireSecondsSinceEpochUTC(session);
-
-          await this._ddbDocClient.update({
-            TableName: this._tableName,
-            Key: {
-              [this._hashKey]: `${this._prefix}${sid}`,
-            },
-            UpdateExpression: 'set expires = :e',
-            ExpressionAttributeValues: {
-              ':e': newExpires,
-            },
-            ReturnValues: 'UPDATED_NEW',
-          });
+        const timeElapsed = currentTimeSecs - lastModifiedSecs;
+        if (timeElapsed < touchAfterSecsCapped) {
+          debug(`Skip touching session=${sid}`);
+          if (callback) {
+            callback(null);
+          }
+          return;
         }
+
+        // We are going to touch the session, update the lastModified
+        session.lastModified = new Date().toISOString();
+
+        const newExpires = this.newExpireSecondsSinceEpochUTC(session);
+
+        await this._ddbDocClient.update({
+          TableName: this._tableName,
+          Key: {
+            [this._hashKey]: `${this._prefix}${sid}`,
+          },
+          UpdateExpression: 'set expires = :e, sess.lastModified = :lm',
+          ExpressionAttributeValues: {
+            ':e': newExpires,
+            ':lm': session.lastModified,
+          },
+          ReturnValues: 'UPDATED_NEW',
+        });
+
         if (callback) {
           callback(null);
         }
@@ -587,5 +601,11 @@ export class DynamoDBStore extends session.Store {
         ? +new Date() + sess.cookie.maxAge
         : +new Date() + 60 * 60 * 24 * 1000;
     return Math.floor(expires / 1000);
+  }
+
+  private getTTLSeconds(sess: session.SessionData) {
+    return sess && sess.cookie && sess.cookie.expires
+      ? Math.ceil((Number(new Date(sess.cookie.expires)) - Date.now()) / 1000)
+      : this._touchAfter;
   }
 }
