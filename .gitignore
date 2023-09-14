@@ -15,3 +15,5 @@ coverage/
 docs/
 
 *.tgz
+
+newrelic_agent.log
