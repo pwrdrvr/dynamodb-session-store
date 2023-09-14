@@ -27,7 +27,7 @@
   "scripts": {
     "build": "tsc --build tsconfig.json && echo 'examples/\n*.tsbuildinfo\n*.spec.*' > dist/.npmignore",
     "build:docs": "typedoc src/index.ts",
-    "build:example:express": "esbuild --bundle examples/express.ts --outfile=dist/examples/bundled/express.js --platform=node",
+    "build:example:express": "esbuild --format=cjs examples/express.ts --outfile=dist/examples/bundled/express.js --platform=node",
     "example:cross-account": "TABLE_ARN=${TABLE_ARN:-dynamodb-session-store-test} TABLE_ROLE_ARN=${TABLE_ROLE_ARN:-you-will-have-to-set-this} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/cross-account.ts",
     "example:express": "TABLE_NAME=${TABLE_NAME:-dynamodb-session-store-test} PORT=${PORT:-3001} ts-node -r tsconfig-paths/register examples/express.ts",
     "example:express:newrelic": "NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY:-undefined} TABLE_NAME=${TABLE_NAME:-dynamodb-session-store-test} PORT=${PORT:-3001} node -r newrelic dist/examples/bundled/express.js",
@@ -50,12 +50,12 @@
     "debug": "^4.3.4"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.20.0",
-    "@aws-sdk/lib-dynamodb": "^3.20.0",
+    "@aws-sdk/client-dynamodb": "3.20.0",
+    "@aws-sdk/lib-dynamodb": "3.20.0",
+    "@smithy/smithy-client": "1.0.4",
     "debug": "^4.3.4"
   },
   "devDependencies": {
-    "@aws-sdk/credential-providers": "^3.20.0",
     "@types/debug": "^4.1.7",
     "@types/express-session": "1.17.4",
     "@types/jest": "29.5.2",

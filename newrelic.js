@@ -15,6 +15,9 @@ exports.config = {
    * Set this with `NEW_RELIC_LICENSE_KEY` environment variable.
    */
   license_key: '',
+  audit_log: {
+    enabled: true,
+  },
   logging: {
     /**
      * Level at which to log. 'trace' is most useful to New Relic when diagnosing
