@@ -105,8 +105,8 @@ describe('dynamodb-store - table via jest-dynalite', () => {
       // Mock the current date and time
       const mockCurrentTime = new Date('2022-07-01T00:00:00Z').getTime();
 
-      // Spy on the Date object and mock the now() method
-      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => mockCurrentTime);
+      // Spy on the Date object and mock the now() method, once (for the put)
+      jest.spyOn(Date, 'now').mockImplementationOnce(() => mockCurrentTime);
 
       store.set(
         '301',
@@ -121,9 +121,6 @@ describe('dynamodb-store - table via jest-dynalite', () => {
         },
         (err) => {
           expect(err).toBeNull();
-
-          // Reset the mock so we check the current time against the expires field
-          nowSpy.mockReset();
 
           store.get('301', (err, session) => {
             expect(err).toBeNull();
