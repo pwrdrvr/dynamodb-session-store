@@ -1,4 +1,4 @@
-import * as session from 'express-session';
+import { Store, SessionData } from 'express-session';
 import {
   DynamoDBClient,
   CreateTableCommandInput,
@@ -170,7 +170,7 @@ export interface DynamoDBStoreOptions {
  *   - $50 / month for writes
  *   - $134 / month total
  */
-export class DynamoDBStore extends session.Store {
+export class DynamoDBStore extends Store {
   private _dynamoDBClient: DynamoDBClient;
   private _ddbDocClient: DynamoDBDocument;
   private _createTableOptions?: Partial<CreateTableCommandInput>;
@@ -387,7 +387,7 @@ export class DynamoDBStore extends session.Store {
      * @param session Session data
      * @returns void
      */
-    callback: (err: unknown, session?: session.SessionData | null) => void,
+    callback: (err: unknown, session?: SessionData | null) => void,
   ): void {
     void (async () => {
       try {
@@ -445,7 +445,7 @@ export class DynamoDBStore extends session.Store {
      * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/howitworks-ttl.html}
      * @see {@link https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/time-to-live-ttl-how-to.html}
      */
-    session: session.SessionData,
+    session: SessionData,
     /**
      * Callback to return an error if the session was not saved
      * @param err Error
@@ -499,7 +499,7 @@ export class DynamoDBStore extends session.Store {
     /**
      * Session data
      */
-    session: session.SessionData & { lastModified?: string },
+    session: SessionData & { lastModified?: string },
     /**
      * Callback to return an error if the session TTL was not updated
      */
@@ -595,7 +595,7 @@ export class DynamoDBStore extends session.Store {
     })();
   }
 
-  private newExpireSecondsSinceEpochUTC(sess: session.SessionData): number {
+  private newExpireSecondsSinceEpochUTC(sess: SessionData): number {
     const expires =
       typeof sess.cookie.maxAge === 'number'
         ? +new Date() + sess.cookie.maxAge
@@ -603,7 +603,7 @@ export class DynamoDBStore extends session.Store {
     return Math.floor(expires / 1000);
   }
 
-  private getTTLSeconds(sess: session.SessionData) {
+  private getTTLSeconds(sess: SessionData) {
     return sess && sess.cookie && sess.cookie.expires
       ? Math.ceil((Number(new Date(sess.cookie.expires)) - Date.now()) / 1000)
       : this._touchAfter;
