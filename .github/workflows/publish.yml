@@ -38,7 +38,7 @@ jobs:
         run: npm pack
 
       - name: Upload the package tgz as an artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: package
           path: '*.tgz'
