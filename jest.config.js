@@ -42,7 +42,7 @@ module.exports = {
   //   "lcov",
   //   "clover"
   // ],
-  coverageReporters: ['html', 'text', 'clover'],
+  coverageReporters: ['lcov', 'html', 'text'],
 
   // An object that configures minimum threshold enforcement for coverage results
   // coverageThreshold: undefined,
