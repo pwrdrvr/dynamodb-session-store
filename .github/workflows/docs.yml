@@ -7,29 +7,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  install-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/configure-nodejs
+        with:
+          lookup-only: 'true' # We only want to lookup from the cache - if a hit, this job does nothing
+
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Use Node.js 16
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
-      - name: Cache Node Modules
-        id: cache-node-modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            node_modules
-            !node_modules/.cache
-          key: node-modules-${{ hashFiles('package.json', 'package-lock.json') }}
-
-      - name: Install Modules
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
+      - uses: ./.github/actions/configure-nodejs
 
       - name: Build Docs
         run: npm run build:docs
