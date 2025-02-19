@@ -45,3 +45,10 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Upload code coverage
+        if: github.event_name == 'pull_request' && needs.check-access.outputs.has-token-access == 'true'
+        uses: ./.github/actions/coverage-report
+        with:
+          lcov-file: coverage/lcov.info
+          title: Node.js Code Coverage Report
