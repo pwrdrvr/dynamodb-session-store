@@ -51,8 +51,8 @@
     "debug": "^4.3.4"
   },
   "devDependencies": {
-    "@aws-sdk/client-dynamodb": "3.413.0",
-    "@aws-sdk/credential-providers": "3.413.0",
+    "@aws-sdk/client-dynamodb": "3.965.0",
+    "@aws-sdk/credential-providers": "3.965.0",
     "@aws-sdk/lib-dynamodb": "3.413.0",
     "@types/debug": "^4.1.7",
     "@types/express-session": "1.17.4",
